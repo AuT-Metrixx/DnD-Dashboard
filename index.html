@@ -3,195 +3,735 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 5E Live Dashboard</title>
-    <!-- Firebase CDN -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.4.9</title>
+    <!-- Firebase SDK (Cloud Live Sync) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <style>
         :root {
-            --bg-color: #0d1117;
-            --card-bg: #161b22;
-            --card-border: #30363d;
-            --text-color: #c9d1d9;
-            --text-muted: #8b949e;
-            --accent: #58a6ff;
-            --accent-hover: #1f6feb;
-            --pos-color: #3fb950;
-            --neg-color: #f85149;
-            --warning-color: #d29922;
-            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --bg-color: #0d0f12;
+            --card-bg: #161a22;
+            --accent: #cbd5e1;
+            --accent-glow: rgba(203, 213, 225, 0.2);
+            --text-color: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border-color: #262d3d;
+            --pos-color: #48bb78;
+            --neg-color: #e53e3e;
+            --blue-color: #3b82f6;
+            --warning-color: #f59e0b;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background-color: var(--bg-color); color: var(--text-color); font-family: var(--font-family); padding: 15px; max-width: 900px; margin: 0 auto; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 12px;
+            padding-bottom: 60px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--accent);
+            font-size: 1.5rem;
+            margin: 5px 0 15px 0;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .overlay-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+
+        .box-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 340px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        .box-card h2 {
+            margin-top: 0;
+            color: var(--accent);
+            font-size: 1.2rem;
+            text-transform: uppercase;
+        }
+
+        .box-card input {
+            margin-bottom: 10px;
+        }
+
+        .btn-main {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--pos-color);
+            border: none;
+            color: #0d0f12;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+
+        .btn-main:hover { opacity: 0.9; }
+        .error-msg { color: var(--neg-color); font-size: 0.75rem; margin-top: 8px; min-height: 15px; }
+
+        .role-choice-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .role-card-btn {
+            background: #11151d;
+            border: 1px solid var(--border-color);
+            color: var(--accent);
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+        .role-card-btn:hover {
+            border-color: var(--accent);
+            background: #1a2233;
+        }
+        .role-title {
+            font-size: 0.9rem;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .role-desc {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            line-height: 1.3;
+            display: block;
+        }
+
+        #view-lobby {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .char-select-card {
+            background: #11151d;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+            margin-bottom: 8px;
+        }
+
+        .char-select-info h3 { margin: 0 0 4px 0; color: var(--accent); font-size: 1rem; }
+        .char-select-info p { margin: 0; color: var(--text-muted); font-size: 0.8rem; }
+
+        .switch-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        .switch-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--neg-color);
+            transition: .3s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--pos-color); }
+        input:checked + .slider:before { transform: translateX(24px); }
+
+        .mode-nav {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 4px;
+            margin-bottom: 14px;
+            background: #11151d;
+            padding: 6px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .mode-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 8px 2px;
+            font-size: 0.65rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .mode-btn.active {
+            background-color: var(--card-bg);
+            color: var(--accent);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .btn-logout-nav {
+            color: var(--neg-color) !important;
+        }
+
+        .section {
+            background-color: var(--card-bg);
+            padding: 14px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            color: var(--accent);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+
+        @media (min-width: 400px) {
+            .grid-4 { grid-template-columns: repeat(4, 1fr); }
+        }
+
+        .attr-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        @media (min-width: 500px) { .attr-grid { grid-template-columns: 1fr 1fr; } }
+
+        label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 3px;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        .field-left label { text-align: left; }
+
+        input[type="text"], input[type="number"], input[type="password"], select, textarea {
+            width: 100%;
+            padding: 8px;
+            background-color: #0f1319;
+            border: 1px solid var(--border-color);
+            color: white;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        select { cursor: pointer; text-align-last: center; }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 5px var(--accent-glow);
+        }
+
+        .field-left input { text-align: left; }
+
+        .stat-box {
+            background: #11151d;
+            padding: 8px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .mod-display { font-size: 0.95rem; font-weight: bold; margin-top: 4px; }
+
+        .attr-group {
+            background: #11151d;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .attr-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 6px;
+            margin-bottom: 6px;
+        }
+
+        .attr-title { font-weight: bold; color: var(--accent); font-size: 0.85rem; text-transform: uppercase; }
+        .attr-inputs { display: flex; gap: 6px; align-items: center; }
+        .attr-inputs input { width: 50px; padding: 4px; font-size: 0.9rem; }
+
+        .list-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; font-size: 0.8rem; }
+        .list-row-left { display: flex; align-items: center; gap: 6px; }
+        .list-row-left input[type="checkbox"] { accent-color: var(--pos-color); cursor: pointer; width: 14px; height: 14px; margin: 0; }
+        .list-row span { color: var(--text-muted); }
+        .sub-item { padding-left: 2px; border-top: 1px dotted #202632; }
+
+        .action-btn-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+        .btn-rest {
+            background: #11151d;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 6px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-rest:hover { border-color: var(--accent); }
+
+        .btn-save-compact {
+            background-color: transparent;
+            border: 1px solid var(--blue-color);
+            color: #93c5fd;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+        .btn-save-compact:hover {
+            background-color: rgba(59, 130, 246, 0.15);
+        }
+
+        .btn-action-toggle {
+            width: 100%;
+            padding: 10px;
+            background: #202632;
+            border: 1px solid var(--border-color);
+            color: var(--accent);
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            margin-bottom: 6px;
+        }
+        .btn-action-toggle.active {
+            background: #422026;
+            border-color: var(--neg-color);
+            color: #fc8181;
+            box-shadow: 0 0 10px rgba(229, 62, 62, 0.3);
+        }
+
+        .btn-action-click {
+            width: 100%;
+            padding: 10px;
+            background: #16241b;
+            border: 1px solid var(--pos-color);
+            color: var(--pos-color);
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+            margin-bottom: 6px;
+        }
+        .btn-action-click:hover { background: #1f3326; }
+
+        .status-toggle-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            margin-top: 6px;
+        }
+        .status-chip {
+            background: #11151d;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 6px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .status-chip.active {
+            background: #422026;
+            border-color: var(--neg-color);
+            color: #fc8181;
+        }
+
+        .slot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+        .slot-box { background: #11151d; border: 1px solid var(--border-color); border-radius: 6px; padding: 6px; text-align: center; }
+        .slot-box label { font-size: 0.65rem; }
+        .slot-inputs { display: flex; gap: 4px; margin-top: 2px; }
+        .slot-inputs input { font-size: 0.85rem; padding: 4px; }
+
+        .weapon-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 32px;
+            gap: 4px;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            text-align: center;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .weapon-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 32px;
+            gap: 4px;
+            margin-bottom: 6px;
+            align-items: center;
+        }
+        .weapon-row input { padding: 4px; font-size: 0.8rem; }
+        .weapon-atk-calc {
+            background: #11151d;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 6px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.85rem;
+            color: var(--pos-color);
+        }
+
+        .spell-header {
+            display: grid;
+            grid-template-columns: 28px 2fr 1fr 1.1fr 28px 28px 32px;
+            gap: 4px;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            text-align: center;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .spell-row-wrapper {
+            background: #11151d;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 6px;
+            margin-bottom: 6px;
+        }
+        .spell-row {
+            display: grid;
+            grid-template-columns: 28px 2fr 1fr 1.1fr 28px 28px 32px;
+            gap: 4px;
+            align-items: center;
+        }
+        .spell-row input, .spell-row select { padding: 4px; font-size: 0.8rem; }
+        
+        .spell-notes-container {
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px dashed var(--border-color);
+        }
+        .spell-notes-container textarea {
+            font-size: 0.75rem;
+            padding: 6px;
+            resize: vertical;
+            height: 45px;
+            text-align: left;
+        }
+
+        .badge-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
+        .badge-btn {
+            background: #11151d;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 6px 2px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .badge-btn.active {
+            border-color: var(--pos-color);
+            color: var(--pos-color);
+            background: #16241b;
+        }
+
+        .party-card {
+            background: #11151d;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+        }
+        .party-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+        .party-info h3 { margin: 0 0 2px 0; font-size: 0.95rem; color: var(--accent); }
+        .party-info p { margin: 0; font-size: 0.75rem; color: var(--text-muted); }
+        .party-stats { display: flex; gap: 8px; text-align: center; }
+        .party-stat-box { background: #161a22; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--border-color); }
+        .party-stat-box label { font-size: 0.6rem; margin: 0; }
+        .party-stat-box span { font-size: 0.85rem; font-weight: bold; }
+
+        .dm-status-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid #202632;
+        }
+        .dm-badge {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .badge-rage { background: #422026; color: #fc8181; border: 1px solid #e53e3e; }
+        .badge-conc { background: #232136; color: #d8b4fe; border: 1px solid #a855f7; }
+        .badge-transform { background: #1a3826; color: #6ee7b7; border: 1px solid #48bb78; }
+        .badge-star { background: #3b2f15; color: #f6e05e; border: 1px solid #d69e2e; }
+        .badge-cond { background: #381a1a; color: #f87171; border: 1px solid #ef4444; }
+
+        .dm-note-box {
+            margin-top: 8px;
+            background: #0d0f12;
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px dashed var(--border-color);
+        }
+
+        .btn-add {
+            width: 100%;
+            padding: 8px;
+            background-color: #11151d;
+            border: 1px dashed var(--border-color);
+            color: var(--accent);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-top: 6px;
+        }
+        .btn-remove {
+            background-color: #1e1518;
+            border: 1px solid #422026;
+            color: var(--neg-color);
+            border-radius: 6px;
+            height: 28px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .version-badge {
+            position: fixed;
+            bottom: 12px;
+            right: 12px;
+            background-color: #11151d;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            z-index: 100;
+            transition: all 0.2s;
+        }
+        .version-badge:hover {
+            color: var(--accent);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        .modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 16px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.6);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+        .modal-header h2 { margin: 0; font-size: 1.1rem; color: var(--accent); }
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        .changelog-item { margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #202632; }
+        .changelog-item h4 { margin: 0 0 4px 0; color: var(--pos-color); font-size: 0.85rem; }
+        .changelog-item ul { margin: 0; padding-left: 18px; font-size: 0.8rem; color: var(--text-muted); }
+        .changelog-item li { margin-bottom: 3px; }
 
         .hidden { display: none !important; }
-
-        /* Overlay Modals */
-        .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
-        .modal-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px; padding: 25px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        .modal-card h2 { margin-bottom: 15px; color: #fff; }
-        .modal-card input, .modal-card select { width: 100%; padding: 10px; margin-bottom: 15px; background: #0d1117; border: 1px solid var(--card-border); color: #fff; border-radius: 6px; text-align: center; }
-
-        /* Buttons */
-        button, .btn { background: var(--card-border); color: var(--text-color); border: 1px solid var(--card-border); padding: 8px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: background 0.2s; }
-        button:hover { background: #21262d; }
-        .btn-primary { background: var(--accent-hover); color: #fff; border: none; }
-        .btn-primary:hover { background: var(--accent); }
-        .btn-remove { background: rgba(248,81,73,0.15); color: var(--neg-color); border: 1px solid var(--neg-color); border-radius: 4px; }
-        .btn-remove:hover { background: var(--neg-color); color: #fff; }
-        .btn-rest { background: #21262d; border: 1px solid var(--card-border); color: var(--text-color); }
-
-        /* Navigation Bar */
-        #main-nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; background: var(--card-bg); border: 1px solid var(--card-border); padding: 8px; border-radius: 8px; }
-        .mode-btn { background: transparent; border: none; padding: 10px; border-radius: 6px; text-align: center; color: var(--text-muted); font-weight: bold; cursor: pointer; }
-        .mode-btn.active { border: 1px solid var(--card-border); color: var(--text-color); background: #21262d; }
-        .btn-logout-nav { color: var(--neg-color); border: 1px solid rgba(248,81,73,0.3); background: rgba(248,81,73,0.05); }
-
-        /* Cards & UI Elements */
-        .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px; padding: 15px; margin-bottom: 15px; }
-        .card h3 { font-size: 0.95rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid var(--card-border); padding-bottom: 5px; }
-
-        /* Form elements */
-        label { display: block; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; }
-        input[type="text"], input[type="number"], select, textarea { background: #0d1117; border: 1px solid var(--card-border); color: #fff; padding: 8px; border-radius: 6px; width: 100%; text-align: center; }
-        textarea { text-align: left; resize: vertical; min-height: 50px; }
-
-        /* Switch Toggle */
-        .switch-container { display: flex; align-items: center; gap: 8px; }
-        .switch-label { font-size: 0.75rem; color: var(--text-muted); }
-        .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--card-border); transition: .2s; border-radius: 22px; }
-        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .2s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--pos-color); }
-        input:checked + .slider:before { transform: translateX(18px); }
-
-        /* Party & DM Cards */
-        .party-card { background: #0d1117; border: 1px solid var(--card-border); border-radius: 6px; padding: 12px; margin-bottom: 10px; }
-        .party-card-top { display: flex; justify-content: space-between; align-items: center; }
-        .party-info h3 { border: none; padding: 0; margin: 0; color: #fff; text-transform: none; font-size: 1.1rem; }
-        .party-info p { font-size: 0.8rem; color: var(--text-muted); }
-        .party-stats { display: flex; gap: 10px; align-items: center; }
-        .party-stat-box { background: var(--card-bg); border: 1px solid var(--card-border); padding: 4px 8px; border-radius: 4px; text-align: center; min-width: 45px; }
-        .party-stat-box span { font-weight: bold; font-size: 0.95rem; display: block; }
-
-        .dm-status-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
-        .dm-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
-        .badge-rage { background: rgba(248,81,73,0.2); color: var(--neg-color); border: 1px solid var(--neg-color); }
-        .badge-conc { background: rgba(88,166,255,0.2); color: var(--accent); border: 1px solid var(--accent); }
-        .badge-cond { background: rgba(210,153,34,0.2); color: var(--warning-color); border: 1px solid var(--warning-color); }
-
-        .char-select-card { background: #0d1117; border: 1px solid var(--card-border); border-radius: 6px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .char-select-info h3 { border: none; padding: 0; margin: 0; color: #fff; text-transform: none; }
-        .char-select-info p { font-size: 0.8rem; color: var(--text-muted); }
-
-        .weapon-row, .spell-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
-        .spell-row-wrapper { border-bottom: 1px dashed var(--card-border); padding-bottom: 6px; margin-bottom: 6px; }
-        .calc-display { background: #0d1117; border: 1px solid var(--card-border); padding: 6px; border-radius: 4px; font-weight: bold; font-size: 0.85rem; min-width: 40px; text-align: center; }
     </style>
 </head>
 <body>
 
-    <!-- Header -->
-    <div style="text-align: center; margin-bottom: 15px;">
-        <h1 style="font-size: 1.4rem; color: #fff; letter-spacing: 1px;">D&D 5E LIVE DASHBOARD</h1>
-    </div>
-
-    <!-- Navigation Bar -->
-    <div id="main-nav" class="hidden">
-        <button type="button" class="mode-btn active" id="btn-mode-lobby" onclick="switchMode('lobby')">LOBBY</button>
-        <button type="button" class="mode-btn" id="btn-mode-sheet" onclick="switchMode('sheet')">CHARAKTER</button>
-        <button type="button" class="mode-btn" id="btn-mode-party" onclick="switchMode('party')">PARTY LIVE</button>
-        <button type="button" class="mode-btn btn-logout-nav" onclick="logout()">ABMELDEN 🚪</button>
-    </div>
-
-    <!-- LOGIN OVERLAY -->
-    <div id="login-overlay" class="overlay">
-        <div class="modal-card">
-            <h2>Willkommen! 👋</h2>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px;">Bitte melde dich an, um deinen Helden oder das DM-Board zu laden.</p>
-            <input type="text" id="login-user" placeholder="Benutzername (z. B. test1, admin)">
-            <input type="password" id="login-pass" placeholder="Passwort (0000)">
-            <button class="btn-primary" style="width: 100%; padding: 12px;" onclick="processLogin()">Anmelden ➔</button>
-            <div id="login-error" style="color: var(--neg-color); font-size: 0.8rem; margin-top: 10px;"></div>
+    <div id="login-overlay" class="overlay-screen">
+        <div class="box-card">
+            <h2>D&D Login</h2>
+            <label class="field-left" style="margin-bottom:2px;">Benutzername</label>
+            <input type="text" id="login-user" value="test1" placeholder="admin, test1, test2, test3, test4">
+            
+            <label class="field-left" style="margin-bottom:2px;">Passwort</label>
+            <input type="password" id="login-pass" value="0000" placeholder="0000">
+            
+            <button type="button" class="btn-main" onclick="processLogin()">Anmelden</button>
+            <div id="login-error" class="error-msg"></div>
         </div>
     </div>
 
-    <!-- ROLE SELECTION OVERLAY -->
-    <div id="role-overlay" class="overlay hidden">
-        <div class="modal-card">
+    <!-- ROLLEN-AUSWAHL MIT ERKLÄrenden INFOS -->
+    <div id="role-overlay" class="overlay-screen hidden">
+        <div class="box-card" style="max-width: 360px;">
             <h2>Rolle wählen</h2>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Als was möchtest du diesen Tab verwenden?</p>
-            <button class="btn-primary" style="width: 100%; padding: 12px; margin-bottom: 10px;" onclick="selectRole('player')">🗡️ Spieler Ansicht</button>
-            <button class="btn" style="width: 100%; padding: 12px;" onclick="selectRole('dm')">👑 Spielleiter (DM) Ansicht</button>
-        </div>
-    </div>
-
-    <!-- VIEW: LOBBY -->
-    <div id="view-lobby" class="hidden">
-        <div class="card">
-            <h3>DM-Lobby & Raum-Beitritt (<span id="lobby-user-tag" style="color:var(--accent);"></span>)</h3>
-            <label>Vom DM erhaltener Raum-Code</label>
-            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <input type="text" id="join-room-input" value="zarthul-gruppe">
-                <button class="btn-primary" onclick="joinRoom()" style="background-color: var(--pos-color);">RAUM BEITRETEN</button>
-            </div>
-            <div id="sync-status" style="font-size: 0.8rem; text-align: center; color: var(--text-muted);">Lokal Modus</div>
-        </div>
-
-        <div class="card">
-            <h3>Deine Helden-Charaktere</h3>
-            <div id="character-list-container"></div>
-            <button class="btn" style="width: 100%; margin-top: 10px;" onclick="createNewCharacter()">+ Neuen Charakter erstellen</button>
-        </div>
-    </div>
-
-    <!-- VIEW: DM DASHBOARD -->
-    <div id="view-dm" class="hidden">
-        <div class="card">
-            <h3>SPIELLEITER (DM) DASHBOARD - RAUMSTEUERUNG</h3>
-            <label>AKTIVER DM RAUM-CODE FÜR DIE GRUPPE</label>
-            <div style="display: flex; gap: 10px; margin-top: 8px;">
-                <input type="text" id="dm-room-code-input" placeholder="Raum-Code eingeben..." style="flex-grow: 1;">
-                <button type="button" class="btn-primary" onclick="confirmDMRoom()">Raum bestätigen ➔</button>
-            </div>
-            <div id="dm-debug-box" style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);"></div>
-        </div>
-
-        <div class="card">
-            <h3>Aktive Helden der Party</h3>
-            <div id="dm-list-container">
-                <div style="text-align: center; color: var(--text-muted); padding: 15px;">Keine Helden aktiv.</div>
+            <p style="font-size:0.75rem; color: var(--text-muted); margin-top:4px;">Wie möchtest du dieser Session beitreten?</p>
+            <div class="role-choice-grid">
+                <button type="button" class="role-card-btn" onclick="selectRole('player')">
+                    <span class="role-title">⚔️ Als Spieler einsteigen</span>
+                    <span class="role-desc">Verwalte deinen Helden, setze Zauber ein, tracke HP, Ressourcen und verfolge das Live-Geschehen der Gruppe.</span>
+                </button>
+                <button type="button" class="role-card-btn" style="border-color: var(--blue-color);" onclick="selectRole('dm')">
+                    <span class="role-title" style="color: #93c5fd;">👑 Als Spielleiter (DM) einsteigen</span>
+                    <span class="role-desc">Überwache alle aktiven Helden live im Raum, behalte HP & Zustände im Blick und verteile geheime DM-Notizen.</span>
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- VIEW: PARTY LIVE (SPIELER) -->
-    <div id="view-party" class="hidden">
-        <div class="card">
-            <h3>Party Gruppen-Übersicht</h3>
-            <div id="party-list-container">
-                <div style="text-align: center; color: var(--text-muted); padding: 15px;">Keine Charaktere im Raum.</div>
+    <h1>D&D 5e Live Dashboard</h1>
+
+    <div class="mode-nav" id="main-nav" style="display: none;"></div>
+
+    <div id="view-lobby" class="section hidden">
+        <div class="section-title">DM-Lobby & Raum-Beitritt (<span id="user-display-name">Gast</span>)</div>
+        <div class="grid-2" style="gap: 6px; margin-bottom: 12px;">
+            <div class="field-left">
+                <label>Vom DM erhaltener Raum-Code</label>
+                <input type="text" id="join-room-input" value="zarthul-gruppe" placeholder="z.B. dnd-runde">
+            </div>
+            <div style="display: flex; align-items: flex-end;">
+                <button type="button" class="btn-main" style="margin: 0; height: 41px;" onclick="joinRoom()">Raum beitreten</button>
             </div>
         </div>
+        <div id="sync-status" style="font-size: 0.8rem; color: var(--pos-color); padding: 8px; text-align: center; background: #11151d; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 12px;">Verbunden mit Lobby</div>
+
+        <div class="section-title">Deine Helden-Charaktere</div>
+        <div id="character-list-container"></div>
+        <button type="button" class="btn-add" style="margin-top: 10px;" onclick="createNewCharacter()">+ Neuen Charakter erstellen</button>
     </div>
 
-    <!-- VIEW: CHARACTER SHEET -->
     <div id="view-sheet" class="hidden">
-        <div style="display: flex; justify-content: space-between; gap: 10px; margin-bottom: 15px;">
-            <button class="btn-primary btn-save-compact" style="flex-grow: 1; background-color: var(--accent-hover);" onclick="manualSaveWithFeedback()">💾 Speichern</button>
-            <button class="btn-rest" onclick="triggerShortRest()">☕ Kurze Rast</button>
-            <button class="btn-rest" onclick="triggerLongRest()">🏕️ Lange Rast</button>
+        <div class="action-btn-grid">
+            <button type="button" class="btn-save-compact" onclick="manualSaveWithFeedback()">💾 Speichern</button>
+            <button type="button" class="btn-rest" onclick="triggerShortRest()">☕ Kurze Rast</button>
+            <button type="button" class="btn-rest" style="border-color: var(--pos-color); color: var(--pos-color);" onclick="triggerLongRest()">🏕️ Lange Rast</button>
         </div>
 
-        <!-- Basis Parameter -->
-        <div class="card">
-            <h3>Helden-Profil</h3>
-            <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-                <div><label>Name</label><input type="text" id="char-name" oninput="saveData()"></div>
-                <div><label>Klasse</label>
-                    <select id="char-class" onchange="onClassChange(); saveData();">
+        <div class="section">
+            <div class="field-left" style="margin-bottom: 10px;">
+                <label>Name</label>
+                <input type="text" id="char-name" value="Zar´thul Rocgarn" placeholder="Charaktername" oninput="saveData()">
+            </div>
+            <div class="grid-3">
+                <div class="field-left">
+                    <label>Klasse</label>
+                    <select id="char-class" onchange="updateSubclasses(); onClassChange(); saveData();">
                         <option value="Barbar">Barbar</option>
                         <option value="Barde">Barde</option>
                         <option value="Kleriker">Kleriker</option>
@@ -206,204 +746,229 @@
                         <option value="Magier">Magier</option>
                     </select>
                 </div>
-                <div><label>Subklasse / Pfad</label>
-                    <select id="char-subclass" onchange="onSubclassChange(); saveData();"></select>
+                <div class="field-left">
+                    <label>Subklasse / Pfad</label>
+                    <select id="char-subclass" onchange="onSubclassChange(); saveData();">
+                    </select>
                 </div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
-                <div><label>Stufe</label><input type="number" id="char-level" value="1" oninput="autoScaleResources(); updateAllCalculations(); saveData();"></div>
-            </div>
-        </div>
-
-        <!-- Klassenspezifische Ressourcen (Dynamisch) -->
-        <div id="res-barbar" class="card hidden">
-            <h3>Barbar - Wut</h3>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <input type="hidden" id="rage-curr" value="2">
-                <input type="hidden" id="rage-max" value="2">
-                <button type="button" class="btn-primary" id="btn-toggle-rage" style="width: 100%; padding: 10px;" onclick="toggleRageState()">🔥 Wut aktivieren</button>
-            </div>
-            <div id="subres-worldtree" class="hidden" style="margin-top: 10px; border-top: 1px dashed var(--card-border); padding-top: 8px;">
-                <label>Vitalität des Weltenbaums (Temp HP vergeben)</label>
-                <div style="display: flex; gap: 6px;">
-                    <input type="text" id="worldtree-target" placeholder="Ziel Name (z. B. Ich oder Verbündeter)">
-                    <button type="button" class="btn-rest" onclick="useWorldTreeVigor()">Anwenden</button>
+                <div class="field-left">
+                    <label>Stufe</label>
+                    <input type="number" id="char-level" value="6" placeholder="Stufe" oninput="updateAllCalculations(); saveData();">
                 </div>
             </div>
         </div>
 
-        <div id="res-moench" class="card hidden">
-            <h3>Mönch - Ki-Punkte</h3>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>Verbleibende Ki-Punkte: <span id="ki-display" style="font-weight: bold; color: var(--accent);">0/0</span></div>
-                <button type="button" class="btn-rest" onclick="useKiPoint()">1 Ki verbrauchen</button>
-            </div>
-            <input type="hidden" id="ki-curr" value="0">
-            <input type="hidden" id="ki-max" value="0">
-        </div>
+        <div id="class-resource-section" class="section">
+            <div class="section-title" id="class-resource-title">Klassen-Ressourcen (Auto-Skalierung aktiv)</div>
+            
+            <!-- BARBAR & WELTENBAUM PFAD -->
+            <div id="res-barbar" class="hidden">
+                <input type="hidden" id="rage-curr" value="4">
+                <input type="hidden" id="rage-max" value="4">
+                <button type="button" class="btn-action-toggle" id="btn-toggle-rage" onclick="toggleRageState()">🔥 Wut (4/4)</button>
 
-        <div id="res-kaempfer" class="card hidden">
-            <h3>Kämpfer - Fertigkeiten</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                <div>
-                    <label>Aktionsschub</label>
-                    <button type="button" class="btn-rest" style="width: 100%;" onclick="useActionSurge()">⚡ Schub verbrauchen (<span id="surge-display">1/1</span>)</button>
-                    <input type="hidden" id="surge-curr" value="1"><input type="hidden" id="surge-max" value="1">
-                </div>
-                <div>
-                    <label>Durchschnaufen</label>
-                    <button type="button" class="btn-rest" style="width: 100%;" onclick="useSecondWind()">❤️ Durchschnaufen (<span id="wind-display">1/1</span>)</button>
-                    <input type="hidden" id="wind-curr" value="1"><input type="hidden" id="wind-max" value="1">
+                <div id="subres-worldtree" class="hidden" style="margin-top: 8px; background: #11151d; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div class="section-title" style="font-size:0.75rem; color: var(--pos-color);">🌳 Weltenbaum-Pfad: Vitalität des Baums</div>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <input type="text" id="worldtree-target" placeholder="Empfänger (z.B. Ich oder Name)" value="Ich" oninput="saveData()" style="font-size:0.8rem; text-align:left;">
+                        <button type="button" class="btn-action-click" onclick="useWorldTreeVigor()" style="margin: 0; background: #16241b; white-space:nowrap;">🌳 Temp-HP geben</button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <div id="res-druide" class="card hidden">
-            <h3>Druide - Wildform</h3>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>Einsätze: <span id="wildform-display" style="font-weight: bold; color: var(--pos-color);">2/2</span></div>
-                <button type="button" class="btn-rest" onclick="useWildform()">Wildform verbrauchen</button>
+            <!-- MÖNCH -->
+            <div id="res-moench" class="hidden">
+                <input type="hidden" id="ki-curr" value="6">
+                <input type="hidden" id="ki-max" value="6">
+                <button type="button" class="btn-action-click" id="btn-ki-use" onclick="useKiPoint()" style="margin-bottom:6px;">⚡ Ki-Punkt einsetzen (<span id="ki-display">6/6</span>)</button>
+                <div class="grid-3">
+                    <button type="button" class="btn-rest" onclick="useKiAction('Flurry of Blows')">🥊 Flurry</button>
+                    <button type="button" class="btn-rest" onclick="useKiAction('Patient Defense')">🛡️ Ausweichen</button>
+                    <button type="button" class="btn-rest" onclick="useKiAction('Step of the Wind')">🏃 Spurt</button>
+                </div>
             </div>
-            <input type="hidden" id="wildform-curr" value="2"><input type="hidden" id="wildform-max" value="2">
-        </div>
 
-        <!-- Kampfwerte & Zustände -->
-        <div class="card">
-            <h3>Kampfwerte & Zustände</h3>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px;">
-                <div><label>Aktuelle HP</label><input type="number" id="hp-curr" value="10" oninput="saveData()"></div>
-                <div><label>Max HP</label><input type="number" id="hp-max" value="10" oninput="saveData()"></div>
-                <div><label>Temp HP</label><input type="number" id="hp-temp" value="0" oninput="saveData()"></div>
-                <div><label>Rüstung (AC)</label><input type="number" id="ac" value="10" oninput="saveData()"></div>
+            <!-- KÄMPFER -->
+            <div id="res-kaempfer" class="hidden">
+                <input type="hidden" id="surge-curr" value="1">
+                <input type="hidden" id="surge-max" value="1">
+                <input type="hidden" id="wind-curr" value="1">
+                <input type="hidden" id="wind-max" value="1">
+                <button type="button" class="btn-action-click" id="btn-surge-use" onclick="useActionSurge()" style="margin-bottom: 6px;">⚔️ Aktionsschub einsetzen (<span id="surge-display">1/1</span>)</button>
+                <button type="button" class="btn-action-click" id="btn-wind-use" onclick="useSecondWind()" style="background: #11151d; border-color: var(--border-color); color: var(--accent);">🛡️ Durchschnaufen einsetzen (<span id="wind-display">1/1</span>)</button>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-                <div><label>Übungsbonus</label><input type="number" id="pb" value="2" oninput="updateAllCalculations(); saveData();"><div id="pb-display" class="calc-display" style="margin-top:2px;">+2</div></div>
-                <div><label>Initiative</label><input type="number" id="init" value="2" oninput="saveData()"></div>
+            <div id="subres-battlemaster" class="grid-2 hidden" style="margin-top: 8px;">
+                <div class="stat-box"><label>Überlegenheitswürfel</label><input type="number" id="bm-dice-curr" value="4" oninput="saveData()"></div>
+                <div class="stat-box"><label>Würfel-Typ</label><div class="calc-display" style="font-size:1.1rem; margin-top:2px;">d8</div></div>
             </div>
-            <div style="margin-top: 8px; display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.75rem; color: var(--text-muted);">Ungerüstete Rüstungsklasse (Auto AC)</span>
-                <input type="checkbox" id="auto-ac-toggle" onchange="updateAllCalculations(); saveData();">
-            </div>
-            <div style="margin-top: 10px;">
-                <label style="color: var(--warning-color);">Aktive Zustände (sichtbar für DM)</label>
-                <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
-                    <button type="button" class="btn-rest" id="cond-poisoned" onclick="toggleCondition('poisoned')">☣️ Vergiftet</button>
-                    <button type="button" class="btn-rest" id="cond-stunned" onclick="toggleCondition('stunned')">💫 Betäubt</button>
-                    <button type="button" class="btn-rest" id="cond-prone" onclick="toggleCondition('prone')">🛌 Liegend</button>
-                    <button type="button" class="btn-rest" id="cond-paralyzed" onclick="toggleCondition('paralyzed')">⚡ Gelähmt</button>
-                </div>
-            </div>
-        </div>
 
-        <!-- Attribute & Fertigkeiten -->
-        <div class="card">
-            <h3>Attribute & Fertigkeiten</h3>
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
-                <!-- ST -->
-                <div style="background: #0d1117; padding: 8px; border-radius: 6px; border: 1px solid var(--card-border);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <label style="margin:0;">Stärke (STR)</label>
-                        <input type="number" id="str" value="10" oninput="updateAllCalculations(); saveData();" style="width: 50px;">
-                        <div id="str-mod" class="calc-display">+0</div>
-                    </div>
-                    <div style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 2px; margin-top: 6px;">
-                        <label><input type="checkbox" id="save-str" onchange="updateAllCalculations(); saveData()"> Rettungswurf</label>
-                        <label><input type="checkbox" id="skill-athletics" onchange="updateAllCalculations(); saveData()"> Athletik</label>
-                    </div>
-                </div>
-                <!-- GE -->
-                <div style="background: #0d1117; padding: 8px; border-radius: 6px; border: 1px solid var(--card-border);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <label style="margin:0;">Geschick (DEX)</label>
-                        <input type="number" id="dex" value="10" oninput="updateAllCalculations(); saveData();" style="width: 50px;">
-                        <div id="dex-mod" class="calc-display">+0</div>
-                    </div>
-                    <div style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 2px; margin-top: 6px;">
-                        <label><input type="checkbox" id="save-dex" onchange="updateAllCalculations(); saveData()"> Rettungswurf</label>
-                        <label><input type="checkbox" id="skill-acrobatics" onchange="updateAllCalculations(); saveData()"> Akrobatik</label>
-                        <label><input type="checkbox" id="skill-sleight" onchange="updateAllCalculations(); saveData()"> Fingerfertigkeit</label>
-                        <label><input type="checkbox" id="skill-stealth" onchange="updateAllCalculations(); saveData()"> Heimlichkeit</label>
-                    </div>
-                </div>
-                <!-- KO -->
-                <div style="background: #0d1117; padding: 8px; border-radius: 6px; border: 1px solid var(--card-border);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <label style="margin:0;">Konstitution (CON)</label>
-                        <input type="number" id="con" value="10" oninput="updateAllCalculations(); saveData();" style="width: 50px;">
-                        <div id="con-mod" class="calc-display">+0</div>
-                    </div>
-                    <div style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 2px; margin-top: 6px;">
-                        <label><input type="checkbox" id="save-con" onchange="updateAllCalculations(); saveData()"> Rettungswurf</label>
-                    </div>
-                </div>
-                <!-- IN -->
-                <div style="background: #0d1117; padding: 8px; border-radius: 6px; border: 1px solid var(--card-border);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <label style="margin:0;">Intelligenz (INT)</label>
-                        <input type="number" id="int" value="10" oninput="updateAllCalculations(); saveData();" style="width: 50px;">
-                        <div id="int-mod" class="calc-display">+0</div>
-                    </div>
-                    <div style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 2px; margin-top: 6px;">
-                        <label><input type="checkbox" id="save-int" onchange="updateAllCalculations(); saveData()"> Rettungswurf</label>
-                        <label><input type="checkbox" id="skill-arcana" onchange="updateAllCalculations(); saveData()"> Arkane Kunde</label>
-                        <label><input type="checkbox" id="skill-history" onchange="updateAllCalculations(); saveData()"> Geschichte</label>
-                    </div>
-                </div>
-                <!-- WE -->
-                <div style="background: #0d1117; padding: 8px; border-radius: 6px; border: 1px solid var(--card-border);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <label style="margin:0;">Weisheit (WIS)</label>
-                        <input type="number" id="wis" value="10" oninput="updateAllCalculations(); saveData();" style="width: 50px;">
-                        <div id="wis-mod" class="calc-display">+0</div>
-                    </div>
-                    <div style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 2px; margin-top: 6px;">
-                        <label><input type="checkbox" id="save-wis" onchange="updateAllCalculations(); saveData()"> Rettungswurf</label>
-                        <label><input type="checkbox" id="skill-perception" onchange="updateAllCalculations(); saveData()"> Wahrnehmung</label>
-                    </div>
-                </div>
-                <!-- CH -->
-                <div style="background: #0d1117; padding: 8px; border-radius: 6px; border: 1px solid var(--card-border);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                        <label style="margin:0;">Charisma (CHA)</label>
-                        <input type="number" id="cha" value="10" oninput="updateAllCalculations(); saveData();" style="width: 50px;">
-                        <div id="cha-mod" class="calc-display">+0</div>
-                    </div>
-                    <div style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 2px; margin-top: 6px;">
-                        <label><input type="checkbox" id="save-cha" onchange="updateAllCalculations(); saveData()"> Rettungswurf</label>
-                        <label><input type="checkbox" id="skill-persuasion" onchange="updateAllCalculations(); saveData()"> Einschüchtern</label>
+            <!-- SCHURKE -->
+            <div id="res-schurke" class="grid-2 hidden">
+                <div class="stat-box"><label>Sneak Attack (Auto)</label><div class="calc-display" id="sneak-atk-dice" style="font-size: 1.1rem; margin-top: 4px; color: var(--pos-color);">3W6</div></div>
+                <div class="stat-box"><label>Cunning Action</label><div style="font-size: 0.8rem; color: var(--pos-color); margin-top: 6px; font-weight: bold;">Aktiv</div></div>
+            </div>
+
+            <!-- DRUIDE -->
+            <div id="res-druide" class="hidden">
+                <input type="hidden" id="wildform-curr" value="2">
+                <input type="hidden" id="wildform-max" value="2">
+                <button type="button" class="btn-action-click" id="btn-wildform-use" onclick="useWildform()" style="margin-bottom: 8px;">🐾 Wildform-Einsatz (<span id="wildform-display">2/2</span>)</button>
+
+                <div id="subres-moon" class="hidden" style="margin-top: 6px; background: #11151d; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div class="section-title" style="font-size:0.75rem; color: var(--pos-color);">🌙 Mond-Zirkel: Wildform-Kampfwerte</div>
+                    <div class="grid-3">
+                        <div class="field-left"><label>Tierform Name</label><input type="text" id="moon-beast-name" placeholder="z.B. Braunbär" oninput="saveData()"></div>
+                        <div class="stat-box"><label>Tier HP / Temp HP</label><input type="number" id="moon-beast-hp" placeholder="34" oninput="saveData()"></div>
+                        <div class="stat-box"><label>Tier Rüstung (AC)</label><input type="number" id="moon-beast-ac" placeholder="11" oninput="saveData()"></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Waffen -->
-        <div class="card">
-            <h3>Waffen & Angriffe</h3>
+        <div class="section">
+            <div class="section-title">Kampfwerte & Status</div>
+            <div class="grid-4" style="margin-bottom: 10px;">
+                <div class="stat-box"><label>Aktuelle HP</label><input type="number" id="hp-curr" value="59" oninput="saveData()"></div>
+                <div class="stat-box"><label>Max HP</label><input type="number" id="hp-max" value="59" oninput="saveData()"></div>
+                <div class="stat-box"><label>Temp HP</label><input type="number" id="hp-temp" value="0" oninput="saveData()"></div>
+                <div class="stat-box"><label>Rüstung (AC)</label><input type="number" id="ac" value="15" oninput="updateAllCalculations(); saveData();"></div>
+            </div>
+            <div class="grid-2" style="margin-bottom: 10px;">
+                <div class="stat-box"><label>Übungsbonus (PB)</label><input type="number" id="pb" value="3" oninput="updateAllCalculations(); saveData();"></div>
+                <div class="stat-box"><label>Initiative</label><input type="number" id="init" value="2" oninput="saveData()"></div>
+            </div>
+
+            <div style="background: #11151d; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: bold;">Ungerüstete Rüstung (Auto AC)</span>
+                <input type="checkbox" id="auto-ac-toggle" onchange="updateAllCalculations(); saveData();" style="accent-color: var(--pos-color); width: 16px; height: 16px; cursor: pointer;">
+            </div>
+
+            <label class="field-left" style="margin-top: 8px;">Aktive Zustände & Effekte (Sichtbar für DM)</label>
+            <div class="status-toggle-grid">
+                <button type="button" class="status-chip" id="cond-poisoned" onclick="toggleCondition('poisoned')">☣️ Vergiftet</button>
+                <button type="button" class="status-chip" id="cond-stunned" onclick="toggleCondition('stunned')">💫 Betäubt</button>
+                <button type="button" class="status-chip" id="cond-prone" onclick="toggleCondition('prone')">🛌 Liegend</button>
+                <button type="button" class="status-chip" id="cond-paralyzed" onclick="toggleCondition('paralyzed')">⚡ Gelähmt</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Attribute & Fertigkeiten</div>
+            <div class="attr-grid">
+                <!-- STR -->
+                <div class="attr-group">
+                    <div class="attr-header">
+                        <span class="attr-title">Stärke (STR)</span>
+                        <div class="attr-inputs">
+                            <input type="number" id="str" value="16" oninput="updateAllCalculations(); saveData();">
+                            <div class="mod-display" id="str-mod" style="color: var(--pos-color);">+3</div>
+                        </div>
+                    </div>
+                    <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-str" checked onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span>+6</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-athletics" checked onchange="updateAllCalculations(); saveData()"> Athletik</div><span>+6</span></div>
+                </div>
+                <!-- DEX -->
+                <div class="attr-group">
+                    <div class="attr-header">
+                        <span class="attr-title">Geschick (DEX)</span>
+                        <div class="attr-inputs">
+                            <input type="number" id="dex" value="14" oninput="updateAllCalculations(); saveData();">
+                            <div class="mod-display" id="dex-mod" style="color: var(--pos-color);">+2</div>
+                        </div>
+                    </div>
+                    <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-dex" onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span>+2</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-acrobatics" onchange="updateAllCalculations(); saveData()"> Akrobatik</div><span>+2</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-sleight" onchange="updateAllCalculations(); saveData()"> Fingerfertigkeit</div><span>+2</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-stealth" onchange="updateAllCalculations(); saveData()"> Heimlichkeit</div><span>+2</span></div>
+                </div>
+                <!-- CON -->
+                <div class="attr-group">
+                    <div class="attr-header">
+                        <span class="attr-title">Konstitution (CON)</span>
+                        <div class="attr-inputs">
+                            <input type="number" id="con" value="16" oninput="updateAllCalculations(); saveData();">
+                            <div class="mod-display" id="con-mod" style="color: var(--pos-color);">+3</div>
+                        </div>
+                    </div>
+                    <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-con" checked onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span>+6</span></div>
+                </div>
+                <!-- INT -->
+                <div class="attr-group">
+                    <div class="attr-header">
+                        <span class="attr-title">Intelligenz (INT)</span>
+                        <div class="attr-inputs">
+                            <input type="number" id="int" value="8" oninput="updateAllCalculations(); saveData();">
+                            <div class="mod-display" id="int-mod" style="color: var(--neg-color);">-1</div>
+                        </div>
+                    </div>
+                    <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-int" onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span>-1</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-arcana" onchange="updateAllCalculations(); saveData()"> Arkane Kunde</div><span>-1</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-history" onchange="updateAllCalculations(); saveData()"> Geschichte</div><span>-1</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-investigation" onchange="updateAllCalculations(); saveData()"> Untersuchung</div><span>-1</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-nature" onchange="updateAllCalculations(); saveData()"> Naturkunde</div><span>-1</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-religion" onchange="updateAllCalculations(); saveData()"> Religion</div><span>-1</span></div>
+                </div>
+                <!-- WIS -->
+                <div class="attr-group">
+                    <div class="attr-header">
+                        <span class="attr-title">Weisheit (WIS)</span>
+                        <div class="attr-inputs">
+                            <input type="number" id="wis" value="10" oninput="updateAllCalculations(); saveData();">
+                            <div class="mod-display" id="wis-mod">+0</div>
+                        </div>
+                    </div>
+                    <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-wis" onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span>+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-animal" onchange="updateAllCalculations(); saveData()"> Tierumgang</div><span>+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-insight" onchange="updateAllCalculations(); saveData()"> Einsicht</div><span>+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-medicine" onchange="updateAllCalculations(); saveData()"> Heilkunde</div><span>+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-perception" onchange="updateAllCalculations(); saveData()"> Wahrnehmung</div><span>+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-survival" onchange="updateAllCalculations(); saveData()"> Überleben</div><span>+0</span></div>
+                </div>
+                <!-- CHA -->
+                <div class="attr-group">
+                    <div class="attr-header">
+                        <span class="attr-title">Charisma (CHA)</span>
+                        <div class="attr-inputs">
+                            <input type="number" id="cha" value="10" oninput="updateAllCalculations(); saveData();">
+                            <div class="mod-display" id="cha-mod">+0</div>
+                        </div>
+                    </div>
+                    <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-cha" onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span>+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-deception" onchange="updateAllCalculations(); saveData()"> Täuschung</div><span>+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-intimidation" onchange="updateAllCalculations(); saveData()"> Einschüchtern</div><span>+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-performance" onchange="updateAllCalculations(); saveData()"> Auftreten</div><span>+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-persuasion" onchange="updateAllCalculations(); saveData()"> Überzeugen</div><span>+0</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Waffen & Angriffe</div>
+            <div class="weapon-header">
+                <span>Waffe</span><span>Magie (+X)</span><span>Schaden</span><span>Bonus</span><span></span>
+            </div>
             <div id="weapons-list"></div>
-            <button type="button" class="btn" style="width: 100%; margin-top: 6px;" onclick="addWeapon(); saveData();">+ Waffe hinzufügen</button>
+            <button type="button" class="btn-add" onclick="addWeapon(); saveData();">+ Waffe hinzufügen</button>
         </div>
 
-        <!-- Reichtum & Münzen -->
-        <div class="card">
-            <h3>Reichtum & Münzen</h3>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
-                <div><label>Gold (GP)</label><input type="number" id="coin-gp" value="0" oninput="saveData()"></div>
-                <div><label>Silber (SP)</label><input type="number" id="coin-sp" value="0" oninput="saveData()"></div>
-                <div><label>Kupfer (CP)</label><input type="number" id="coin-cp" value="0" oninput="saveData()"></div>
+        <div class="section">
+            <div class="section-title">Reichtum & Münzen</div>
+            <div class="grid-3">
+                <div class="stat-box"><label>Gold (GP)</label><input type="number" id="coin-gp" value="150" oninput="saveData()"></div>
+                <div class="stat-box"><label>Silber (SP)</label><input type="number" id="coin-sp" value="25" oninput="saveData()"></div>
+                <div class="stat-box"><label>Kupfer (CP)</label><input type="number" id="coin-cp" value="10" oninput="saveData()"></div>
             </div>
         </div>
 
-        <!-- Rucksack & Ausrüstung -->
-        <div class="card">
-            <h3>Rucksack & Ausrüstung</h3>
-            <textarea id="inventory-text" placeholder="Deine Ausrüstung, Gegenstände & Notizen..." oninput="saveData()"></textarea>
+        <div class="section">
+            <div class="section-title">Rucksack & Ausrüstung</div>
+            <textarea id="inventory-text" rows="3" placeholder="Deine Ausrüstung, Gegenstände & Notizen..." oninput="saveData()">Erkundungsausrüstung, Kletterseil, Handbeil, Handwerkszeug.</textarea>
         </div>
 
-        <!-- Zauber Section -->
-        <div id="spell-section" class="card hidden">
-            <h3>Zauberbuch & Zauberplätze</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px;">
-                <div>
+        <div id="spell-section" class="section hidden">
+            <div class="section-title">Zauberbuch & Zauberplätze</div>
+            <div class="grid-3" style="margin-bottom: 10px;">
+                <div class="field-left">
                     <label>Zauber-Attribut</label>
                     <select id="spell-attr" onchange="updateAllCalculations(); saveData();">
                         <option value="int">Intelligenz</option>
@@ -411,27 +976,94 @@
                         <option value="cha">Charisma</option>
                     </select>
                 </div>
-                <div><label>Zauber-DC</label><div id="spell-dc-display" class="calc-display" style="padding:8px;">8</div></div>
-                <div><label>Zauber-Angriff</label><div id="spell-atk-display" class="calc-display" style="padding:8px;">+0</div></div>
+                <div class="stat-box"><label>Zauber-DC</label><div class="calc-display" id="spell-dc-display" style="font-size: 1.1rem; margin-top: 4px;">12</div></div>
+                <div class="stat-box"><label>Zauber-Angriff</label><div class="calc-display" id="spell-atk-display" style="font-size: 1.1rem; margin-top: 4px; color: var(--pos-color);">+4</div></div>
             </div>
-            <div id="spells-list"></div>
-            <button type="button" class="btn" style="width: 100%; margin-top: 6px;" onclick="addSpell(); saveData();">+ Zauber hinzufügen</button>
+
+            <div class="slot-grid" id="spell-slots-container">
+                <div class="slot-box"><label>1. Grad</label><div class="slot-inputs"><input type="number" id="slot-1-curr" value="4" oninput="saveData()"><span>/</span><input type="number" id="slot-1-max" value="4" oninput="saveData()"></div></div>
+                <div class="slot-box"><label>2. Grad</label><div class="slot-inputs"><input type="number" id="slot-2-curr" value="3" oninput="saveData()"><span>/</span><input type="number" id="slot-2-max" value="3" oninput="saveData()"></div></div>
+                <div class="slot-box"><label>3. Grad</label><div class="slot-inputs"><input type="number" id="slot-3-curr" value="2" oninput="saveData()"><span>/</span><input type="number" id="slot-3-max" value="2" oninput="saveData()"></div></div>
+            </div>
+
+            <div style="margin-top: 12px;">
+                <div class="spell-header">
+                    <span>Prep</span><span>Zauber</span><span>Grad</span><span>Zeit / Typ</span><span>Konz</span><span></span><span></span>
+                </div>
+                <div id="spells-list"></div>
+                <button type="button" class="btn-add" onclick="addSpell(); saveData();">+ Zauber hinzufügen</button>
+            </div>
         </div>
 
-        <!-- Inventar & Tränke -->
-        <div class="card">
-            <h3>Tränke & Verbrauchsgegenstände</h3>
+        <div class="section">
+            <div class="section-title">Tränke & Verbrauchsgegenstände</div>
             <div id="potions-container"></div>
-            <button type="button" class="btn" style="width: 100%; margin-top: 6px;" onclick="addPotionSlot(); saveData();">+ Trank/Item hinzufügen</button>
+            <button type="button" class="btn-add" onclick="addPotionSlot(); saveData();">+ Trank / Item hinzufügen</button>
         </div>
     </div>
 
-    <!-- JAVASCRIPT CODE -->
+    <!-- VIEW: DM DASHBOARD -->
+    <div id="view-dm" class="section hidden">
+        <div class="section-title">Spielleiter (DM) Dashboard - Raumsteuerung</div>
+        <div class="field-left" style="margin-bottom: 8px;">
+            <label>Aktiver DM Raum-Code für die Gruppe</label>
+            <div style="display: flex; gap: 6px;">
+                <input type="text" id="dm-room-code-input" value="zarthul-gruppe" placeholder="Raum-Code..." style="flex-grow: 1;">
+                <button type="button" class="btn-main" style="margin:0; width: auto; padding: 0 14px;" onclick="confirmDMRoom()">Raum wechseln</button>
+            </div>
+        </div>
+        <div id="dm-debug-box" style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 12px; background: #11151d; padding: 6px; border-radius: 6px;">Status: Bereit</div>
+
+        <div class="section-title">Aktive Helden der Party im Raum</div>
+        <div id="dm-list-container">
+            <div style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 0.85rem;">Keine aktiven Helden im Raum gefunden.</div>
+        </div>
+    </div>
+
+    <!-- VIEW: PARTY LIVE (SPIELER) -->
+    <div id="view-party" class="section hidden">
+        <div class="section-title">Party Gruppen-Übersicht (Live Sync)</div>
+        <div id="party-list-container">
+            <div style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 0.85rem;">Verbinde mit Raum...</div>
+        </div>
+    </div>
+
+    <div class="version-badge" onclick="openChangelogModal()">v0.4.9 Stable</div>
+
+    <div id="changelog-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Version 0.4.9 - Changelog</h2>
+                <button type="button" class="modal-close" onclick="closeChangelogModal()">✕</button>
+            </div>
+            <div class="changelog-item">
+                <h4>🚀 Stabile Core-Architektur</h4>
+                <ul>
+                    <li>Zuverlässige Navigation mit klaren Modi (Lobby, Charakter, Party Live, Abmelden).</li>
+                    <li>Sicherer Session-Check gegen doppeltes Einloggen auf verschiedenen Geräten.</li>
+                </ul>
+            </div>
+            <div class="changelog-item">
+                <h4>🔥 Klassen & Dynamische Ressourcen</h4>
+                <ul>
+                    <li>Automatische Skalierung von Wut, Ki-Punkten, Aktionsschub und Wildformen basierend auf Charakterstufe.</li>
+                    <li>Spezifische Unterklassen-Erweiterungen (z.B. Weltenbaum-Barbar, Mond-Druide).</li>
+                </ul>
+            </div>
+            <div class="changelog-item">
+                <h4>⚡ Echtzeit Cloud-Sync</h4>
+                <ul>
+                    <li>Nahtlose Übertragung von HP, Rüstung, Konzentration und aktiven Zuständen an den Spielleiter (DM).</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <script>
         const firebaseConfig = {
             databaseURL: "https://dnd-live-dashboard-default-rtdb.europe-west1.firebasedatabase.app/"
         };
-        
+
         let db = null;
         let isCloudActive = false;
         let currentActiveCharId = null;
@@ -468,17 +1100,14 @@
                 document.getElementById('login-overlay').classList.add('hidden');
                 document.getElementById('role-overlay').classList.remove('hidden');
             } else {
-                err.innerText = "Ungültiger Benutzername oder Passwort!";
+                err.innerText = "Ungültiger Benutzername oder Passwort! (Nutze test1-4 / 0000)";
             }
         }
 
         function registerSingleSession() {
             if (!isCloudActive || !db || !currentUser) return;
             let sessionRef = db.ref('active_sessions/' + currentUser);
-            sessionRef.set({
-                sessionId: mySessionId,
-                loginTime: Date.now()
-            });
+            sessionRef.set({ sessionId: mySessionId, loginTime: Date.now() });
 
             sessionRef.on('value', (snapshot) => {
                 let data = snapshot.val();
@@ -504,16 +1133,16 @@
             if (currentRole === 'dm') {
                 nav.style.gridTemplateColumns = 'repeat(2, 1fr)';
                 nav.innerHTML = `
-                    <button type="button" class="mode-btn active" id="btn-mode-dm" onclick="switchMode('dm')">DM Ansicht</button>
-                    <button type="button" class="mode-btn btn-logout-nav" onclick="logout()">ABMELDEN 🚪</button>
+                    <button type="button" class="mode-btn active" onclick="switchMode('dm')">👑 DM Ansicht</button>
+                    <button type="button" class="mode-btn btn-logout-nav" onclick="logout()">Abmelden 🚪</button>
                 `;
             } else {
                 nav.style.gridTemplateColumns = 'repeat(4, 1fr)';
                 nav.innerHTML = `
-                    <button type="button" class="mode-btn active" id="btn-mode-lobby" onclick="switchMode('lobby')">LOBBY</button>
-                    <button type="button" class="mode-btn" id="btn-mode-sheet" onclick="switchMode('sheet')">CHARAKTER</button>
-                    <button type="button" class="mode-btn" id="btn-mode-party" onclick="switchMode('party')">PARTY LIVE</button>
-                    <button type="button" class="mode-btn btn-logout-nav" onclick="logout()">ABMELDEN 🚪</button>
+                    <button type="button" class="mode-btn active" id="btn-mode-lobby" onclick="switchMode('lobby')">Lobby</button>
+                    <button type="button" class="mode-btn" id="btn-mode-sheet" onclick="switchMode('sheet')">Charakter</button>
+                    <button type="button" class="mode-btn" id="btn-mode-party" onclick="switchMode('party')">Party Live</button>
+                    <button type="button" class="mode-btn btn-logout-nav" onclick="logout()">Abmelden 🚪</button>
                 `;
             }
             nav.style.display = 'grid';
@@ -556,7 +1185,6 @@
         function dmKickCharacter(charKey) {
             if (!confirm("Möchtest du diesen Charakter wirklich aus dem Raum werfen?")) return;
             if (!isCloudActive || !db) return;
-            
             db.ref('rooms/' + activeRoom + '/characters/' + charKey).remove().then(() => {
                 alert("Charakter erfolgreich aus dem Raum entfernt.");
             });
@@ -617,7 +1245,7 @@
             let currentTemp = tempHpInput ? (parseInt(tempHpInput.value) || 0) : 0;
             if (tempHpInput) tempHpInput.value = Math.max(currentTemp, tempHpVal);
             saveData();
-            alert(`🌳 Vitalität des Weltenbaums aktiv! ${target} erhält ${tempHpVal} temporäre Trefferpunkte.`);
+            alert(`🌳 Weltenbaum-Vitalität aktiv! ${target} erhält ${tempHpVal} temporäre Trefferpunkte.`);
         }
 
         function updateKiDisplay() {
@@ -635,6 +1263,18 @@
             currInput.value = curr - 1;
             updateKiDisplay();
             saveData();
+        }
+
+        function useKiAction(actionName) {
+            let currInput = document.getElementById('ki-curr');
+            if (!currInput) return;
+            let curr = parseInt(currInput.value) || 0;
+            let cost = (actionName === 'Flurry of Blows') ? 2 : 1;
+            if (curr < cost) { alert(`Nicht genug Ki-Punkte für ${actionName} (benötigt ${cost})!`); return; }
+            currInput.value = curr - cost;
+            updateKiDisplay();
+            saveData();
+            alert(`⚡ Ki-Aktion angewandt: ${actionName} (${cost} Ki verbraucht).`);
         }
 
         function updateActionSurgeDisplay() {
@@ -724,6 +1364,11 @@
                 if (wildCurr && wildMax) wildCurr.value = wildMax.value;
                 updateWildformDisplay();
 
+                document.querySelectorAll('.slot-inputs input[id$="-curr"]').forEach(inp => {
+                    let maxInp = document.getElementById(inp.id.replace('-curr', '-max'));
+                    if (maxInp) inp.value = maxInp.value;
+                });
+
                 saveData();
                 alert("🏕️ Lange Rast abgeschlossen! Alle Ressourcen wieder voll.");
             }
@@ -770,10 +1415,19 @@
             let sub = subSelect.value;
 
             let subresWorldTree = document.getElementById('subres-worldtree');
+            let subresBattlemaster = document.getElementById('subres-battlemaster');
+            let subresMoon = document.getElementById('subres-moon');
+
             if (subresWorldTree) subresWorldTree.classList.add('hidden');
+            if (subresBattlemaster) subresBattlemaster.classList.add('hidden');
+            if (subresMoon) subresMoon.classList.add('hidden');
 
             if (cls === "Barbar" && sub.includes("Weltenbaum")) {
                 if (subresWorldTree) subresWorldTree.classList.remove('hidden');
+            } else if (cls === "Kämpfer" && sub.includes("Battle Master")) {
+                if (subresBattlemaster) subresBattlemaster.classList.remove('hidden');
+            } else if (cls === "Druide" && sub.includes("Mondes")) {
+                if (subresMoon) subresMoon.classList.remove('hidden');
             }
         }
 
@@ -807,6 +1461,10 @@
                 if (wMax) wMax.value = maxWind;
                 updateActionSurgeDisplay();
                 updateSecondWindDisplay();
+            } else if (cls === "Schurke") {
+                let sneakDice = Math.ceil(lvl / 2);
+                let sneakEl = document.getElementById('sneak-atk-dice');
+                if (sneakEl) sneakEl.innerText = sneakDice + "W6";
             } else if (cls === "Druide") {
                 let wMax = document.getElementById('wildform-max');
                 if (wMax) wMax.value = 2;
@@ -823,16 +1481,19 @@
             let resBarbar = document.getElementById('res-barbar');
             let resMoench = document.getElementById('res-moench');
             let resKaempfer = document.getElementById('res-kaempfer');
+            let resSchurke = document.getElementById('res-schurke');
             let resDruide = document.getElementById('res-druide');
 
             if (resBarbar) resBarbar.classList.add('hidden');
             if (resMoench) resMoench.classList.add('hidden');
             if (resKaempfer) resKaempfer.classList.add('hidden');
+            if (resSchurke) resSchurke.classList.add('hidden');
             if (resDruide) resDruide.classList.add('hidden');
 
             if (cls === "Barbar" && resBarbar) resBarbar.classList.remove('hidden');
             if (cls === "Mönch" && resMoench) resMoench.classList.remove('hidden');
             if (cls === "Kämpfer" && resKaempfer) resKaempfer.classList.remove('hidden');
+            if (cls === "Schurke" && resSchurke) resSchurke.classList.remove('hidden');
             if (cls === "Druide" && resDruide) resDruide.classList.remove('hidden');
 
             const spellClasses = ["Barde", "Kleriker", "Druide", "Paladin", "Waldläufer", "Hexenmeister", "Zauberer", "Magier"];
@@ -861,25 +1522,21 @@
             if (isCloudActive && db) {
                 if (statusElem) {
                     statusElem.innerText = "Verbunden mit Raum: " + activeRoom + " (⚡)";
-                    statusElem.style.color = "var(--pos-color)";
                 }
-                if (debugBox) debugBox.innerHTML = `🔍 Verbunden mit Raum: <b>${activeRoom}</b>. Lausche auf Firebase...`;
+                if (debugBox) debugBox.innerText = `Verbunden mit Raum: ${activeRoom}. Lausche auf Firebase...`;
                 
                 db.ref('rooms/' + activeRoom).on('value', (snapshot) => {
                     let data = snapshot.val();
                     renderPartyViews(data);
                     if (currentRole === 'player') renderCharacterList();
                 }, (error) => {
-                    if (debugBox) debugBox.innerHTML = `❌ Firebase Fehler: ${error.message}`;
+                    if (debugBox) debugBox.innerText = `Firebase Fehler: ${error.message}`;
                 });
 
                 if (currentUser) registerSingleSession();
             } else {
-                if (statusElem) {
-                    statusElem.innerText = "Lokal Modus";
-                    statusElem.style.color = "var(--text-muted)";
-                }
-                if (debugBox) debugBox.innerHTML = `❌ Cloud inaktiv (Lokal Modus).`;
+                if (statusElem) statusElem.innerText = "Lokal Modus (Keine Cloud)";
+                if (debugBox) debugBox.innerText = "Cloud inaktiv (Lokal Modus).";
             }
         }
 
@@ -946,6 +1603,11 @@
             renderCharacterList();
         }
 
+        function saveDMSecetNote(charKey, noteVal) {
+            if (!isCloudActive || !db) return;
+            db.ref('rooms/' + activeRoom + '/characters/' + charKey).update({ dmNote: noteVal });
+        }
+
         function renderPartyViews(data) {
             let partyContainer = document.getElementById('party-list-container');
             let dmContainer = document.getElementById('dm-list-container');
@@ -972,11 +1634,8 @@
 
                 let hpPercent = Math.max(0, Math.min(100, (hpCurr / Math.max(1, hpMax)) * 100));
                 let hpColor = 'var(--pos-color)';
-                if (hpPercent <= 15) {
-                    hpColor = 'var(--neg-color)';
-                } else if (hpPercent < 50) {
-                    hpColor = 'var(--warning-color)';
-                }
+                if (hpPercent <= 15) hpColor = 'var(--neg-color)';
+                else if (hpPercent < 50) hpColor = 'var(--warning-color)';
 
                 let userTag = c.user ? ` <span style="font-size:0.75rem; color: var(--accent);">[${c.user.toUpperCase()}]</span>` : '';
 
@@ -1000,7 +1659,7 @@
                             </div>
                             <div class="party-stats">
                                 <div class="party-stat-box"><label>HP</label><span style="color: ${hpColor};">${hpCurr}/${hpMax}</span></div>
-                                <div class="party-stat-box"><label>AC</label><span style="color:var(--text-color);">${ac}</span></div>
+                                <div class="party-stat-box"><label>AC</label><span>${ac}</span></div>
                             </div>
                         </div>
                     </div>
@@ -1016,14 +1675,14 @@
                             </div>
                             <div class="party-stats">
                                 <div class="party-stat-box"><label>HP</label><span style="color: ${hpColor};">${hpCurr}/${hpMax}</span></div>
-                                <div class="party-stat-box"><label>RK</label><span style="color:var(--text-color);">${ac}</span></div>
-                                <button type="button" class="btn-remove" onclick="dmKickCharacter('${charKey}')" title="Aus Raum kicken" style="margin-left: 8px; height: 32px; width: 32px;">✕</button>
+                                <div class="party-stat-box"><label>RK</label><span>${ac}</span></div>
+                                <button type="button" class="btn-remove" onclick="dmKickCharacter('${charKey}')" title="Aus Raum kicken" style="margin-left: 6px; width: 28px;">✕</button>
                             </div>
                         </div>
                         ${badgesHTML ? `<div class="dm-status-badges">${badgesHTML}</div>` : ''}
-                        <div class="dm-note-box" style="margin-top: 8px;">
+                        <div class="dm-note-box">
                             <label style="text-align: left; font-size: 0.65rem; color: var(--warning-color);">👑 Geheime DM-Notiz:</label>
-                            <input type="text" placeholder="Nur für den Spielleiter..." value="${dmNoteVal}" onchange="saveDMSecetNote('${charKey}', this.value)" style="font-size: 0.8rem; padding: 4px; text-align: left;">
+                            <input type="text" placeholder="Nur für Spielleiter..." value="${dmNoteVal}" onchange="saveDMSecetNote('${charKey}', this.value)" style="font-size: 0.75rem; padding: 4px; text-align: left;">
                         </div>
                     </div>
                 `;
@@ -1064,7 +1723,7 @@
                 if (btnParty) btnParty.classList.add('active');
                 if (party) party.classList.remove('hidden');
             } else if (mode === 'dm' && currentRole === 'dm') {
-                let btnDm = document.getElementById('btn-mode-dm');
+                let btnDm = document.querySelector('.mode-btn');
                 if (btnDm) btnDm.classList.add('active');
                 if (dm) dm.classList.remove('hidden');
             }
@@ -1084,8 +1743,8 @@
             let container = document.getElementById('character-list-container');
             let activeInRoomCharId = localStorage.getItem('dnd_room_active_char_' + currentUser + '_' + activeRoom);
 
-            let lobbyUserTag = document.getElementById('lobby-user-tag');
-            if (lobbyUserTag && currentUser) lobbyUserTag.innerText = currentUser.toUpperCase();
+            let userDisplayName = document.getElementById('user-display-name');
+            if (userDisplayName && currentUser) userDisplayName.innerText = currentUser.toUpperCase();
 
             if (!container) return;
 
@@ -1111,7 +1770,7 @@
                                     <span class="slider"></span>
                                 </label>
                             </div>
-                            <span onclick="loadCharacter('${c.id}')" style="font-size: 0.75rem; color: var(--pos-color); font-weight: bold; cursor: pointer;">Auswählen ➔</span>
+                            <span onclick="loadCharacter('${c.id}')" style="font-size: 0.75rem; color: var(--pos-color); font-weight: bold; cursor: pointer;">Wählen ➔</span>
                         </div>
                     </div>
                 `;
@@ -1233,7 +1892,7 @@
                 if (data.weapons && data.weapons.length > 0) {
                     data.weapons.forEach(w => addWeapon(w.name, w.magic, w.dice));
                 } else {
-                    addWeapon('Waffe', 0, '1W8');
+                    addWeapon('Großaxt +1', 1, '1W12');
                 }
             }
 
@@ -1243,7 +1902,7 @@
                 if (data.potions && data.potions.length > 0) {
                     data.potions.forEach(p => addPotionSlot(p.type, p.count));
                 } else {
-                    addPotionSlot('Heiltrank (1W4+4)', 1);
+                    addPotionSlot('Heiltrank (1W4+4)', 2);
                 }
             }
 
@@ -1265,22 +1924,13 @@
         function updateAllCalculations() {
             let pbEl = document.getElementById('pb');
             let pb = pbEl ? (parseInt(pbEl.value) || 0) : 0;
-            let pbDisp = document.getElementById('pb-display');
-            if (pbDisp) pbDisp.innerText = (pb >= 0 ? "+" + pb : pb);
 
-            let strEl = document.getElementById('str');
-            let dexEl = document.getElementById('dex');
-            let conEl = document.getElementById('con');
-            let intEl = document.getElementById('int');
-            let wisEl = document.getElementById('wis');
-            let chaEl = document.getElementById('cha');
-
-            let strMod = getMod(strEl ? parseInt(strEl.value) : 10);
-            let dexMod = getMod(dexEl ? parseInt(dexEl.value) : 10);
-            let conMod = getMod(conEl ? parseInt(conEl.value) : 10);
-            let intMod = getMod(intEl ? parseInt(intEl.value) : 10);
-            let wisMod = getMod(wisEl ? parseInt(wisEl.value) : 10);
-            let chaMod = getMod(chaEl ? parseInt(chaEl.value) : 10);
+            let strMod = getMod(parseInt(document.getElementById('str').value));
+            let dexMod = getMod(parseInt(document.getElementById('dex').value));
+            let conMod = getMod(parseInt(document.getElementById('con').value));
+            let intMod = getMod(parseInt(document.getElementById('int').value));
+            let wisMod = getMod(parseInt(document.getElementById('wis').value));
+            let chaMod = getMod(parseInt(document.getElementById('cha').value));
 
             formatValue('str-mod', strMod);
             formatValue('dex-mod', dexMod);
@@ -1345,7 +1995,7 @@
                         <option value="4" ${level==='4'?'selected':''}>4. Grad</option>
                         <option value="5" ${level==='5'?'selected':''}>5. Grad</option>
                     </select>
-                    <input type="text" placeholder="Zeit" value="${time}" class="spell-time" oninput="saveData()">
+                    <input type="text" placeholder="Zeit / Typ" value="${time}" class="spell-time" oninput="saveData()">
                     <input type="checkbox" class="spell-conc" ${conc ? 'checked' : ''} onchange="saveData()">
                     <button type="button" class="btn-rest" onclick="toggleSpellNotes(this)" title="Notizen" style="padding:4px; font-size:0.7rem;">▼</button>
                     <button type="button" class="btn-remove" onclick="this.closest('.spell-row-wrapper').remove(); saveData();">✕</button>
@@ -1364,7 +2014,7 @@
             newRow.className = 'weapon-row';
             newRow.innerHTML = `
                 <input type="text" placeholder="Waffe" value="${name}" class="weapon-name" oninput="saveData()">
-                <input type="number" placeholder="0" value="${magic}" class="weapon-magic" oninput="updateAllCalculations(); saveData();" style="width: 50px;">
+                <input type="number" placeholder="0" value="${magic}" class="weapon-magic" oninput="updateAllCalculations(); saveData();">
                 <input type="text" placeholder="1W12" value="${dice}" class="weapon-dice" oninput="saveData()">
                 <div class="calc-display weapon-atk-calc">+0</div>
                 <button type="button" class="btn-remove" onclick="this.parentElement.remove(); saveData();">✕</button>
@@ -1393,10 +2043,10 @@
                     </select>
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
-                    <button type="button" class="btn-rest" onclick="adjustPotionRow(this, -1)">-</button>
+                    <button type="button" class="btn-rest" onclick="adjustPotionRow(this, -1)" style="padding: 4px 8px;">-</button>
                     <input type="number" class="potion-count" value="${count}" oninput="saveData()" style="width: 45px; padding: 4px;">
-                    <button type="button" class="btn-rest" onclick="adjustPotionRow(this, 1)">+</button>
-                    <button type="button" class="btn-remove" onclick="this.closest('.char-select-card').remove(); saveData();" style="height:32px; width:32px;">✕</button>
+                    <button type="button" class="btn-rest" onclick="adjustPotionRow(this, 1)" style="padding: 4px 8px;">+</button>
+                    <button type="button" class="btn-remove" onclick="this.closest('.char-select-card').remove(); saveData();" style="width: 28px;">✕</button>
                 </div>
             `;
             list.appendChild(row);
@@ -1408,6 +2058,9 @@
             input.value = Math.max(0, val);
             saveData();
         }
+
+        function openChangelogModal() { document.getElementById('changelog-modal').classList.remove('hidden'); }
+        function closeChangelogModal() { document.getElementById('changelog-modal').classList.add('hidden'); }
 
         function saveData() {
             if (!currentActiveCharId || !currentUser || currentRole === 'dm') return;
