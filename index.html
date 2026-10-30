@@ -64,7 +64,7 @@
             padding: 20px;
             border-radius: 12px;
             width: 100%;
-            max-width: 320px;
+            max-width: 340px;
             box-shadow: 0 8px 20px rgba(0,0,0,0.5);
             text-align: center;
         }
@@ -100,25 +100,35 @@
         .role-choice-grid {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 10px;
+            gap: 12px;
             margin-top: 15px;
         }
 
-        .btn-role {
+        .role-card-btn {
             background: #11151d;
             border: 1px solid var(--border-color);
             color: var(--accent);
             padding: 12px;
             border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: bold;
             cursor: pointer;
             transition: all 0.2s;
-            text-align: center;
+            text-align: left;
         }
-        .btn-role:hover {
+        .role-card-btn:hover {
             border-color: var(--accent);
             background: #1a2233;
+        }
+        .role-title {
+            font-size: 0.9rem;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 4px;
+        }
+        .role-desc {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            line-height: 1.3;
+            display: block;
         }
 
         #view-lobby {
@@ -655,7 +665,7 @@
         <div class="box-card">
             <h2>D&D Login</h2>
             <label class="field-left" style="margin-bottom:2px;">Benutzername</label>
-            <input type="text" id="login-user" value="test1" placeholder="admin, test1, test2, test3">
+            <input type="text" id="login-user" value="test1" placeholder="admin, test1, test2, test3, test4">
             
             <label class="field-left" style="margin-bottom:2px;">Passwort</label>
             <input type="password" id="login-pass" value="0000" placeholder="0000">
@@ -665,13 +675,20 @@
         </div>
     </div>
 
+    <!-- ROLLEN-AUSWAHL MIT ERKLÄrenden INFOS -->
     <div id="role-overlay" class="overlay-screen hidden">
-        <div class="box-card">
+        <div class="box-card" style="max-width: 360px;">
             <h2>Rolle wählen</h2>
-            <p style="font-size:0.8rem; color: var(--text-muted); margin-top:4px;">Wie möchtest du dieser Session beitreten?</p>
+            <p style="font-size:0.75rem; color: var(--text-muted); margin-top:4px;">Wie möchtest du dieser Session beitreten?</p>
             <div class="role-choice-grid">
-                <button type="button" class="btn-role" onclick="selectRole('player')">⚔️ Als Spieler einsteigen</button>
-                <button type="button" class="btn-role" style="border-color: var(--blue-color); color: #93c5fd;" onclick="selectRole('dm')">👑 Als Spielleiter (DM) einsteigen</button>
+                <button type="button" class="role-card-btn" onclick="selectRole('player')">
+                    <span class="role-title">⚔️ Als Spieler einsteigen</span>
+                    <span class="role-desc">Verwalte deinen Helden, setze Zauber ein, tracke HP, Ressourcen und verfolge das Live-Geschehen der Gruppe.</span>
+                </button>
+                <button type="button" class="role-card-btn" style="border-color: var(--blue-color);" onclick="selectRole('dm')">
+                    <span class="role-title" style="color: #93c5fd;">👑 Als Spielleiter (DM) einsteigen</span>
+                    <span class="role-desc">Überwache alle aktiven Helden live im Raum, behalte HP & Zustände im Blick und verteile geheime DM-Notizen.</span>
+                </button>
             </div>
         </div>
     </div>
@@ -988,7 +1005,7 @@
     </div>
 
     <div class="version-badge" onclick="toggleChangelogModal(true)">
-        v0.4.6 📜
+        v0.4.7 📜
     </div>
 
     <div id="changelog-modal" class="modal-overlay hidden">
@@ -999,23 +1016,16 @@
             </div>
             
             <div class="changelog-item">
-                <h4>Version 0.4.6 (Aktuell)</h4>
+                <h4>Version 0.4.7 (Aktuell)</h4>
                 <ul>
-                    <li>👑 DM-Notizfeld gefixt: Synchronisation per <code>onchange</code> verhindert Fokus-Verlust beim Tippen.</li>
-                    <li>🌳 Weltenbaum-Barbar: Temp-HP können jetzt wahlweise an sich selbst oder Gruppenmitglieder verteilt werden.</li>
-                    <li>⚡ Mönch-Aktionen: Schnellauswahl für Ki-Tricks (Flurry of Blows, Patient Defense, Step of the Wind).</li>
+                    <li>👥 Rollen-Auswahl beim Login um kompakte Infotexte erweitert (Spieler vs. Spielleiter).</li>
+                    <li>📋 Vorgefertigte Stufe-6 Beispiel-Charaktere für <code>test1</code> bis <code>test4</code> (Barbar, Hexenmeister, Mönch, Kämpfer).</li>
                 </ul>
             </div>
             <div class="changelog-item">
-                <h4>Version 0.4.5</h4>
+                <h4>Version 0.4.6 & Älter</h4>
                 <ul>
-                    <li>🎒 Rucksack-Notizen, Geld-System (GP, SP, CP) & klassisches Waffen-Menü.</li>
-                </ul>
-            </div>
-            <div class="changelog-item">
-                <h4>Version 0.4.0 - 0.4.4</h4>
-                <ul>
-                    <li>🎨 Dynamische HP-Ampel, Tränke-Dropdown & Firebase Live-Sync.</li>
+                    <li>👑 DM-Notiz Fix (onchange), Weltenbaum Temp-HP Verteiler & Firebase Cloud Sync.</li>
                 </ul>
             </div>
         </div>
@@ -1033,7 +1043,7 @@
         let currentUser = null;
         let currentRole = null;
 
-        const validAccounts = ["admin", "test1", "test2", "test3"];
+        const validAccounts = ["admin", "test1", "test2", "test3", "test4"];
 
         const subclassData = {
             "Barbar": ["Pfad des Weltenbaums", "Pfad des Berserkers", "Pfad des Totemkriegers"],
@@ -1711,21 +1721,56 @@
             switchMode('sheet');
         }
 
+        // VORGEFERTIGTE BEISPIEL-CHARAKTERE FÜR TEST1 BIS TEST4 (STUFE 6)
+        function loadDefaultPresetForUser(user) {
+            let newId = 'preset_' + user;
+            let preset = null;
+
+            if (user === 'test1') {
+                preset = {
+                    id: newId, name: 'Zar´thul Rocgarn', clazz: 'Barbar', subclass: 'Pfad des Weltenbaums', level: '6',
+                    'hp-curr': '59', 'hp-max': '59', 'hp-temp': '0', 'ac': '15', 'str': '16', 'dex': '14', 'con': '16', 'int': '8', 'wis': '10', 'cha': '10',
+                    weapons: [{ name: 'Großaxt +1', magic: '1', dice: '1W12' }],
+                    potions: [{ type: 'Heiltrank (1W4+4)', count: '2' }]
+                };
+            } else if (user === 'test2') {
+                preset = {
+                    id: newId, name: 'Malakor der Paktgebundene', clazz: 'Hexenmeister', subclass: 'Der Unterweltler', level: '6',
+                    'hp-curr': '45', 'hp-max': '45', 'hp-temp': '0', 'ac': '14', 'str': '8', 'dex': '14', 'con': '14', 'int': '10', 'wis': '12', 'cha': '18',
+                    'spell-attr': 'cha', 'slot-1-m': '2', 'slot-2-m': '0', 'slot-3-m': '2',
+                    spells: [{ prep: true, name: 'Eldritch Blast', level: '0', time: '1 Akt.', conc: false, notes: 'Magischer Strahl (Reichweite 36m)' },
+                             { prep: true, name: 'Hex (Hexenmal)', level: '1', time: '1 Bonus', conc: true, notes: '+1W6 Schaden bei Treffer' }],
+                    weapons: [{ name: 'Leichter Stab +1', magic: '1', dice: '1W6' }],
+                    potions: [{ type: 'Heiltrank (1W4+4)', count: '1' }]
+                };
+            } else if (user === 'test3') {
+                preset = {
+                    id: newId, name: 'Boren der Stille', clazz: 'Mönch', subclass: 'Weg der Offenen Hand', level: '6',
+                    'hp-curr': '52', 'hp-max': '52', 'hp-temp': '0', 'ac': '16', 'str': '10', 'dex': '18', 'con': '14', 'int': '10', 'wis': '16', 'cha': '8',
+                    weapons: [{ name: 'Unbewaffneter Schlag', magic: '1', dice: '1W6' }],
+                    potions: [{ type: 'Heiltrank (1W4+4)', count: '2' }]
+                };
+            } else if (user === 'test4') {
+                preset = {
+                    id: newId, name: 'Sir Alden', clazz: 'Kämpfer', subclass: 'Meister des Kampfs (Battle Master)', level: '6',
+                    'hp-curr': '60', 'hp-max': '60', 'hp-temp': '0', 'ac': '18', 'str': '18', 'dex': '10', 'con': '16', 'int': '10', 'wis': '12', 'cha': '10',
+                    weapons: [{ name: 'Großschwert +1', magic: '1', dice: '2W6' }],
+                    potions: [{ type: 'Großer Heiltrank (2W4+2)', count: '2' }]
+                };
+            }
+
+            if (preset) {
+                saveCharactersList([{ id: preset.id, name: preset.name, clazz: preset.clazz, subclass: preset.subclass, level: preset.level }]);
+                localStorage.setItem('dnd_sheet_data_' + currentUser + '_' + preset.id, JSON.stringify(preset));
+                return preset.id;
+            }
+            return null;
+        }
+
         function loadCharacterData(charId) {
             updateSubclasses();
             let saved = localStorage.getItem('dnd_sheet_data_' + currentUser + '_' + charId);
-            if (!saved) {
-                document.getElementById('char-name').value = currentUser === 'admin' ? 'Zar´thul Rocgarn' : "Held von " + currentUser.toUpperCase();
-                document.getElementById('char-class').value = "Barbar";
-                document.getElementById('char-subclass').value = "Pfad des Weltenbaums";
-                document.getElementById('char-level').value = "6";
-                updateSubclasses();
-                onClassChange();
-                addWeapon('Großaxt +1', 1, '1W12', 'Hieb');
-                addPotionSlot('Heiltrank (1W4+4)', 2);
-                saveData();
-                return;
-            }
+            if (!saved) return;
 
             let data = JSON.parse(saved);
             Object.keys(data).forEach(id => {
@@ -1763,7 +1808,7 @@
                 data.weapons.forEach(w => addWeapon(w.name, w.magic, w.dice, w.type));
             } else {
                 document.getElementById('weapons-list').innerHTML = '';
-                addWeapon('Großaxt +1', 1, '1W12', 'Hieb');
+                addWeapon('Waffe', 0, '1W8', 'Hieb');
             }
 
             if (data.potions && data.potions.length > 0) {
@@ -1771,12 +1816,11 @@
                 data.potions.forEach(p => addPotionSlot(p.type, p.count));
             } else {
                 document.getElementById('potions-container').innerHTML = '';
-                addPotionSlot('Heiltrank (1W4+4)', 2);
+                addPotionSlot('Heiltrank (1W4+4)', 1);
             }
 
             onClassChange();
             updateAllCalculations();
-            saveData();
         }
 
         function getMod(val) { return isNaN(val) ? 0 : Math.floor((val - 10) / 2); }
@@ -2032,12 +2076,15 @@
             if (currentRole === 'player') {
                 let chars = getCharactersList();
                 if (chars.length === 0) {
-                    let defaultId = 'char_' + currentUser;
-                    let initialName = (currentUser === 'admin') ? 'Zar´thul Rocgarn' : ('Held von ' + currentUser.toUpperCase());
-                    chars.push({ id: defaultId, name: initialName, clazz: 'Barbar', subclass: 'Pfad des Weltenbaums', level: '6' });
-                    saveCharactersList(chars);
+                    let presetId = loadDefaultPresetForUser(currentUser);
+                    if (!presetId) {
+                        let defaultId = 'char_' + currentUser;
+                        chars.push({ id: defaultId, name: 'Held von ' + currentUser.toUpperCase(), clazz: 'Barbar', subclass: 'Pfad des Weltenbaums', level: '6' });
+                        saveCharactersList(chars);
+                    }
                 }
 
+                chars = getCharactersList();
                 let lastChar = localStorage.getItem('dnd_active_char_' + currentUser) || chars[0].id;
                 currentActiveCharId = lastChar;
                 initCloudSync();
