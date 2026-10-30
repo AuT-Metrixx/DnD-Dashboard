@@ -1005,7 +1005,7 @@
     </div>
 
     <div class="version-badge" onclick="toggleChangelogModal(true)">
-        v0.4.8 📜
+        v0.4.9 📜
     </div>
 
     <div id="changelog-modal" class="modal-overlay hidden">
@@ -1016,15 +1016,9 @@
             </div>
             
             <div class="changelog-item">
-                <h4>Version 0.4.8 (Aktuell)</h4>
+                <h4>Version 0.4.9 (Aktuell)</h4>
                 <ul>
-                    <li>🛡️ Strikte Account-Isolierung im LocalStorage behoben: Test-Accounts (test1 bis test4) überschreiben sich gegenseitig nicht mehr und laden jeweils ihr korrektes Stufe-6 Preset (Barbar, Hexenmeister, Mönch, Kämpfer).</li>
-                </ul>
-            </div>
-            <div class="changelog-item">
-                <h4>Version 0.4.7 & Älter</h4>
-                <ul>
-                    <li>👥 Rollen-Auswahl beim Login & voreingestellte Stufe-6 Charaktere.</li>
+                    <li>⚡ Firebase-Raum-Synchronisation und Initialisierung stabilisiert.</li>
                 </ul>
             </div>
         </div>
@@ -1079,12 +1073,14 @@
             localStorage.setItem('dnd_logged_role', role);
             document.getElementById('role-overlay').classList.add('hidden');
             setupNavigation();
-            document.getElementById('user-display-name').innerText = currentUser.toUpperCase() + (role === 'dm' ? ' (DM)' : '');
+            let userDisp = document.getElementById('user-display-name');
+            if (userDisp) userDisp.innerText = currentUser.toUpperCase() + (role === 'dm' ? ' (DM)' : '');
             initApp();
         }
 
         function setupNavigation() {
             let nav = document.getElementById('main-nav');
+            if (!nav) return;
             if (currentRole === 'dm') {
                 nav.style.gridTemplateColumns = 'repeat(2, 1fr)';
                 nav.innerHTML = `
@@ -1110,11 +1106,14 @@
         }
 
         function toggleChangelogModal(show) {
-            document.getElementById('changelog-modal').classList.toggle('hidden', !show);
+            let modal = document.getElementById('changelog-modal');
+            if (modal) modal.classList.toggle('hidden', !show);
         }
 
         function joinRoom() {
-            let code = document.getElementById('join-room-input').value.trim();
+            let codeInput = document.getElementById('join-room-input');
+            if (!codeInput) return;
+            let code = codeInput.value.trim();
             if (!code) { alert("Bitte gib einen gültigen Raum-Code ein!"); return; }
             activeRoom = code;
             localStorage.setItem('dnd_active_room_' + currentUser, code);
@@ -1145,7 +1144,7 @@
 
         function toggleCondition(condName) {
             let btn = document.getElementById('cond-' + condName);
-            btn.classList.toggle('active');
+            if (btn) btn.classList.toggle('active');
             saveData();
         }
 
@@ -1158,6 +1157,7 @@
             let curr = parseInt(document.getElementById('rage-curr').value) || 0;
             let max = parseInt(document.getElementById('rage-max').value) || 4;
             let btnToggle = document.getElementById('btn-toggle-rage');
+            if (!btnToggle) return;
             let isActive = btnToggle.classList.contains('active');
             btnToggle.innerText = isActive ? `🔥 Wut beenden (${curr}/${max} übrig)` : `🔥 Wut (${curr}/${max})`;
         }
@@ -1165,6 +1165,7 @@
         function toggleRageState() {
             let btnToggle = document.getElementById('btn-toggle-rage');
             let currInput = document.getElementById('rage-curr');
+            if (!btnToggle || !currInput) return;
             let max = parseInt(document.getElementById('rage-max').value) || 4;
             let curr = parseInt(currInput.value) || 0;
             let isActive = btnToggle.classList.contains('active');
@@ -1184,11 +1185,12 @@
             let lvl = parseInt(document.getElementById('char-level').value) || 1;
             let conMod = getMod(parseInt(document.getElementById('con').value));
             let tempHpVal = conMod + lvl;
-            let target = document.getElementById('worldtree-target').value.trim() || 'Ich';
+            let targetEl = document.getElementById('worldtree-target');
+            let target = targetEl ? targetEl.value.trim() : 'Ich';
 
             let tempHpInput = document.getElementById('hp-temp');
-            let currentTemp = parseInt(tempHpInput.value) || 0;
-            tempHpInput.value = Math.max(currentTemp, tempHpVal);
+            let currentTemp = tempHpInput ? (parseInt(tempHpInput.value) || 0) : 0;
+            if (tempHpInput) tempHpInput.value = Math.max(currentTemp, tempHpVal);
             saveData();
             alert(`🌳 Vitalität des Weltenbaums aktiv! ${target} erhält ${tempHpVal} temporäre Trefferpunkte.`);
         }
@@ -1202,6 +1204,7 @@
 
         function useKiPoint() {
             let currInput = document.getElementById('ki-curr');
+            if (!currInput) return;
             let curr = parseInt(currInput.value) || 0;
             if (curr <= 0) { alert("Keine Ki-Punkte mehr übrig!"); return; }
             currInput.value = curr - 1;
@@ -1211,6 +1214,7 @@
 
         function useKiAction(actionName) {
             let currInput = document.getElementById('ki-curr');
+            if (!currInput) return;
             let curr = parseInt(currInput.value) || 0;
             if (curr <= 0) { alert(`Keine Ki-Punkte mehr für ${actionName} übrig!`); return; }
             currInput.value = curr - 1;
@@ -1228,6 +1232,7 @@
 
         function useActionSurge() {
             let currInput = document.getElementById('surge-curr');
+            if (!currInput) return;
             let curr = parseInt(currInput.value) || 0;
             if (curr <= 0) { alert("Aktionsschub bereits verbraucht!"); return; }
             currInput.value = curr - 1;
@@ -1244,6 +1249,7 @@
 
         function useSecondWind() {
             let currInput = document.getElementById('wind-curr');
+            if (!currInput) return;
             let curr = parseInt(currInput.value) || 0;
             if (curr <= 0) { alert("Durchschnaufen bereits verbraucht!"); return; }
             currInput.value = curr - 1;
@@ -1260,6 +1266,7 @@
 
         function useWildform() {
             let currInput = document.getElementById('wildform-curr');
+            if (!currInput) return;
             let curr = parseInt(currInput.value) || 0;
             if (curr <= 0) { alert("Keine Wildform-Einsätze mehr übrig!"); return; }
             currInput.value = curr - 1;
@@ -1269,29 +1276,43 @@
 
         function triggerLongRest() {
             if (confirm("Lange Rast durchführen? (Regeneriert HP, Zauberplätze & alle Klassenressourcen)")) {
-                let maxHp = document.getElementById('hp-max').value || '0';
-                document.getElementById('hp-curr').value = maxHp;
-                document.getElementById('hp-temp').value = 0;
+                let maxHpEl = document.getElementById('hp-max');
+                let maxHp = maxHpEl ? maxHpEl.value : '0';
+                let hpCurr = document.getElementById('hp-curr');
+                let hpTemp = document.getElementById('hp-temp');
+                if (hpCurr) hpCurr.value = maxHp;
+                if (hpTemp) hpTemp.value = 0;
 
                 for (let i = 1; i <= 6; i++) {
                     let slotC = document.getElementById(`slot-${i}-c`);
                     if (slotC) slotC.value = 0;
                 }
 
-                document.getElementById('rage-curr').value = document.getElementById('rage-max').value;
+                let rageCurr = document.getElementById('rage-curr');
+                let rageMax = document.getElementById('rage-max');
+                if (rageCurr && rageMax) rageCurr.value = rageMax.value;
                 let btnToggle = document.getElementById('btn-toggle-rage');
                 if (btnToggle) btnToggle.classList.remove('active');
                 updateRageButtonText();
 
-                document.getElementById('ki-curr').value = document.getElementById('ki-max').value;
+                let kiCurr = document.getElementById('ki-curr');
+                let kiMax = document.getElementById('ki-max');
+                if (kiCurr && kiMax) kiCurr.value = kiMax.value;
                 updateKiDisplay();
 
-                document.getElementById('surge-curr').value = document.getElementById('surge-max').value;
+                let surgeCurr = document.getElementById('surge-curr');
+                let surgeMax = document.getElementById('surge-max');
+                if (surgeCurr && surgeMax) surgeCurr.value = surgeMax.value;
                 updateActionSurgeDisplay();
-                document.getElementById('wind-curr').value = document.getElementById('wind-max').value;
+
+                let windCurr = document.getElementById('wind-curr');
+                let windMax = document.getElementById('wind-max');
+                if (windCurr && windMax) windCurr.value = windMax.value;
                 updateSecondWindDisplay();
 
-                document.getElementById('wildform-curr').value = document.getElementById('wildform-max').value;
+                let wildCurr = document.getElementById('wildform-curr');
+                let wildMax = document.getElementById('wildform-max');
+                if (wildCurr && wildMax) wildCurr.value = wildMax.value;
                 updateWildformDisplay();
 
                 saveData();
@@ -1300,12 +1321,17 @@
         }
 
         function triggerShortRest() {
-            let cls = document.getElementById('char-class').value;
-            if (cls === "Hexenmeister") { let s1 = document.getElementById('slot-1-c'); if (s1) s1.value = 0; }
-            if (cls === "Kämpfer") {
-                document.getElementById('surge-curr').value = document.getElementById('surge-max').value;
+            let cls = document.getElementById('char-class');
+            if (!cls) return;
+            if (cls.value === "Hexenmeister") { let s1 = document.getElementById('slot-1-c'); if (s1) s1.value = 0; }
+            if (cls.value === "Kämpfer") {
+                let sCurr = document.getElementById('surge-curr');
+                let sMax = document.getElementById('surge-max');
+                if (sCurr && sMax) sCurr.value = sMax.value;
                 updateActionSurgeDisplay();
-                document.getElementById('wind-curr').value = document.getElementById('wind-max').value;
+                let wCurr = document.getElementById('wind-curr');
+                let wMax = document.getElementById('wind-max');
+                if (wCurr && wMax) wCurr.value = wMax.value;
                 updateSecondWindDisplay();
             }
             saveData();
@@ -1313,12 +1339,12 @@
         }
 
         function updateSubclasses() {
-            let cls = document.getElementById('char-class').value;
+            let clsEl = document.getElementById('char-class');
             let subSelect = document.getElementById('char-subclass');
-            if (!subSelect) return;
+            if (!clsEl || !subSelect) return;
             subSelect.innerHTML = '';
             
-            let list = subclassData[cls] || ["Allgemein"];
+            let list = subclassData[clsEl.value] || ["Allgemein"];
             list.forEach(sub => {
                 let opt = document.createElement('option');
                 opt.value = sub;
@@ -1329,20 +1355,26 @@
         }
 
         function setStarForm(formName) {
-            let current = document.getElementById('active-star-form').value;
+            let formInput = document.getElementById('active-star-form');
+            if (!formInput) return;
+            let current = formInput.value;
             let next = (current === formName) ? '' : formName;
-            document.getElementById('active-star-form').value = next;
+            formInput.value = next;
 
-            document.getElementById('star-form-1').classList.toggle('active', next === 'Meckler');
-            document.getElementById('star-form-2').classList.toggle('active', next === 'Kelch');
-            document.getElementById('star-form-3').classList.toggle('active', next === 'Drache');
+            let f1 = document.getElementById('star-form-1');
+            let f2 = document.getElementById('star-form-2');
+            let f3 = document.getElementById('star-form-3');
+            if (f1) f1.classList.toggle('active', next === 'Meckler');
+            if (f2) f2.classList.toggle('active', next === 'Kelch');
+            if (f3) f3.classList.toggle('active', next === 'Drache');
             saveData();
         }
 
         function onSubclassChange() {
-            let cls = document.getElementById('char-class').value;
+            let clsEl = document.getElementById('char-class');
             let subSelect = document.getElementById('char-subclass');
-            if (!subSelect) return;
+            if (!clsEl || !subSelect) return;
+            let cls = clsEl.value;
             let sub = subSelect.value;
 
             let subresMoon = document.getElementById('subres-moon');
@@ -1359,37 +1391,45 @@
                 if (sub === "Zirkel des Mondes") subresMoon.classList.remove('hidden');
                 if (sub === "Zirkel der Sterne") subresStars.classList.remove('hidden');
             } else if (cls === "Kämpfer" && sub.includes("Battle Master")) {
-                subresBM.classList.remove('hidden');
+                if (subresBM) subresBM.classList.remove('hidden');
             } else if (cls === "Barbar" && sub.includes("Weltenbaum")) {
-                subresWorldTree.classList.remove('hidden');
+                if (subresWorldTree) subresWorldTree.classList.remove('hidden');
             }
         }
 
         function autoScaleResources() {
-            let cls = document.getElementById('char-class').value;
-            let lvl = parseInt(document.getElementById('char-level').value) || 1;
+            let clsEl = document.getElementById('char-class');
+            let lvlEl = document.getElementById('char-level');
+            if (!clsEl || !lvlEl) return;
+            let cls = clsEl.value;
+            let lvl = parseInt(lvlEl.value) || 1;
 
             if (cls === "Barbar") {
                 let maxRage = lvl >= 17 ? 6 : (lvl >= 12 ? 5 : (lvl >= 6 ? 4 : (lvl >= 3 ? 3 : 2)));
-                document.getElementById('rage-max').value = maxRage;
-                let curr = parseInt(document.getElementById('rage-curr').value);
-                if (isNaN(curr) || curr > maxRage) document.getElementById('rage-curr').value = maxRage;
+                let rMax = document.getElementById('rage-max');
+                if (rMax) rMax.value = maxRage;
+                let rCurr = document.getElementById('rage-curr');
+                if (rCurr && (isNaN(parseInt(rCurr.value)) || parseInt(rCurr.value) > maxRage)) rCurr.value = maxRage;
                 updateRageButtonText();
             } else if (cls === "Mönch") {
                 let kiMax = lvl;
-                document.getElementById('ki-max').value = kiMax;
-                let curr = parseInt(document.getElementById('ki-curr').value);
-                if (isNaN(curr) || curr > kiMax) document.getElementById('ki-curr').value = kiMax;
+                let kMax = document.getElementById('ki-max');
+                if (kMax) kMax.value = kiMax;
+                let kCurr = document.getElementById('ki-curr');
+                if (kCurr && (isNaN(parseInt(kCurr.value)) || parseInt(kCurr.value) > kiMax)) kCurr.value = kiMax;
                 updateKiDisplay();
             } else if (cls === "Kämpfer") {
                 let maxSurge = lvl >= 17 ? 2 : (lvl >= 2 ? 1 : 0);
                 let maxWind = lvl >= 10 ? 3 : (lvl >= 4 ? 2 : 1);
-                document.getElementById('surge-max').value = maxSurge;
-                document.getElementById('wind-max').value = maxWind;
+                let sMax = document.getElementById('surge-max');
+                let wMax = document.getElementById('wind-max');
+                if (sMax) sMax.value = maxSurge;
+                if (wMax) wMax.value = maxWind;
                 updateActionSurgeDisplay();
                 updateSecondWindDisplay();
             } else if (cls === "Druide") {
-                document.getElementById('wildform-max').value = 2;
+                let wMax = document.getElementById('wildform-max');
+                if (wMax) wMax.value = 2;
                 updateWildformDisplay();
             } else if (cls === "Schurke") {
                 let sneakDice = Math.ceil(lvl / 2) + "W6";
@@ -1399,7 +1439,9 @@
         }
 
         function onClassChange() {
-            let cls = document.getElementById('char-class').value;
+            let clsEl = document.getElementById('char-class');
+            if (!clsEl) return;
+            let cls = clsEl.value;
             let spellSection = document.getElementById('spell-section');
             
             let resBarbar = document.getElementById('res-barbar');
@@ -1421,8 +1463,10 @@
             if (cls === "Druide" && resDruide) resDruide.classList.remove('hidden');
 
             const spellClasses = ["Barde", "Kleriker", "Druide", "Paladin", "Waldläufer", "Hexenmeister", "Zauberer", "Magier"];
-            if (spellClasses.includes(cls)) spellSection.classList.remove('hidden');
-            else spellSection.classList.add('hidden');
+            if (spellSection) {
+                if (spellClasses.includes(cls)) spellSection.classList.remove('hidden');
+                else spellSection.classList.add('hidden');
+            }
 
             autoScaleResources();
             onSubclassChange();
@@ -1477,7 +1521,8 @@
             });
 
             let btnToggle = document.getElementById('btn-toggle-rage');
-            let isRaging = (document.getElementById('char-class').value === "Barbar" && btnToggle && btnToggle.classList.contains('active'));
+            let charClassEl = document.getElementById('char-class');
+            let isRaging = (charClassEl && charClassEl.value === "Barbar" && btnToggle && btnToggle.classList.contains('active'));
 
             let conditions = {
                 poisoned: document.getElementById('cond-poisoned').classList.contains('active'),
@@ -1490,7 +1535,7 @@
                 user: currentUser,
                 id: currentActiveCharId,
                 name: document.getElementById('char-name').value || 'Helden-Charakter',
-                clazz: document.getElementById('char-class').value || 'Unbekannt',
+                clazz: charClassEl ? charClassEl.value : 'Unbekannt',
                 subclass: document.getElementById('char-subclass').value || '',
                 concentration: activeConcentration,
                 starForm: document.getElementById('active-star-form') ? document.getElementById('active-star-form').value : '',
@@ -1635,8 +1680,9 @@
             if (dm) dm.classList.add('hidden');
 
             if (mode === 'lobby' && currentRole === 'player') {
-                document.getElementById('btn-mode-lobby').classList.add('active');
-                lobby.classList.remove('hidden');
+                let btnLobby = document.getElementById('btn-mode-lobby');
+                if (btnLobby) btnLobby.classList.add('active');
+                if (lobby) lobby.classList.remove('hidden');
                 renderCharacterList();
             } else if (mode === 'sheet' && currentRole === 'player') {
                 if (!currentActiveCharId) {
@@ -1644,14 +1690,17 @@
                     switchMode('lobby');
                     return;
                 }
-                document.getElementById('btn-mode-sheet').classList.add('active');
-                sheet.classList.remove('hidden');
+                let btnSheet = document.getElementById('btn-mode-sheet');
+                if (btnSheet) btnSheet.classList.add('active');
+                if (sheet) sheet.classList.remove('hidden');
             } else if (mode === 'party' && currentRole === 'player') {
-                document.getElementById('btn-mode-party').classList.add('active');
-                party.classList.remove('hidden');
+                let btnParty = document.getElementById('btn-mode-party');
+                if (btnParty) btnParty.classList.add('active');
+                if (party) party.classList.remove('hidden');
             } else if (mode === 'dm' && currentRole === 'dm') {
-                document.getElementById('btn-mode-dm').classList.add('active');
-                dm.classList.remove('hidden');
+                let btnDm = document.getElementById('btn-mode-dm');
+                if (btnDm) btnDm.classList.add('active');
+                if (dm) dm.classList.remove('hidden');
             }
         }
 
@@ -1803,25 +1852,31 @@
             updateWildformDisplay();
 
             let spellsList = document.getElementById('spells-list');
-            if (spellsList) spellsList.innerHTML = '';
-            if (data.spells && data.spells.length > 0) {
-                data.spells.forEach(s => addSpell(s.prep, s.name, s.level, s.time, s.conc, s.notes));
+            if (spellsList) {
+                spellsList.innerHTML = '';
+                if (data.spells && data.spells.length > 0) {
+                    data.spells.forEach(s => addSpell(s.prep, s.name, s.level, s.time, s.conc, s.notes));
+                }
             }
 
             let weaponsList = document.getElementById('weapons-list');
-            if (weaponsList) weaponsList.innerHTML = '';
-            if (data.weapons && data.weapons.length > 0) {
-                data.weapons.forEach(w => addWeapon(w.name, w.magic, w.dice, w.type));
-            } else {
-                addWeapon('Waffe', 0, '1W8', 'Hieb');
+            if (weaponsList) {
+                weaponsList.innerHTML = '';
+                if (data.weapons && data.weapons.length > 0) {
+                    data.weapons.forEach(w => addWeapon(w.name, w.magic, w.dice));
+                } else {
+                    addWeapon('Waffe', 0, '1W8');
+                }
             }
 
             let potionsContainer = document.getElementById('potions-container');
-            if (potionsContainer) potionsContainer.innerHTML = '';
-            if (data.potions && data.potions.length > 0) {
-                data.potions.forEach(p => addPotionSlot(p.type, p.count));
-            } else {
-                addPotionSlot('Heiltrank (1W4+4)', 1);
+            if (potionsContainer) {
+                potionsContainer.innerHTML = '';
+                if (data.potions && data.potions.length > 0) {
+                    data.potions.forEach(p => addPotionSlot(p.type, p.count));
+                } else {
+                    addPotionSlot('Heiltrank (1W4+4)', 1);
+                }
             }
 
             onClassChange();
@@ -1840,15 +1895,23 @@
         }
 
         function updateAllCalculations() {
-            let pb = parseInt(document.getElementById('pb').value) || 0;
+            let pbEl = document.getElementById('pb');
+            let pb = pbEl ? (parseInt(pbEl.value) || 0) : 0;
             formatValue('pb-display', pb);
 
-            let strMod = getMod(parseInt(document.getElementById('str').value));
-            let dexMod = getMod(parseInt(document.getElementById('dex').value));
-            let conMod = getMod(parseInt(document.getElementById('con').value));
-            let intMod = getMod(parseInt(document.getElementById('int').value));
-            let wisMod = getMod(parseInt(document.getElementById('wis').value));
-            let chaMod = getMod(parseInt(document.getElementById('cha').value));
+            let strEl = document.getElementById('str');
+            let dexEl = document.getElementById('dex');
+            let conEl = document.getElementById('con');
+            let intEl = document.getElementById('int');
+            let wisEl = document.getElementById('wis');
+            let chaEl = document.getElementById('cha');
+
+            let strMod = getMod(strEl ? parseInt(strEl.value) : 10);
+            let dexMod = getMod(dexEl ? parseInt(dexEl.value) : 10);
+            let conMod = getMod(conEl ? parseInt(conEl.value) : 10);
+            let intMod = getMod(intEl ? parseInt(intEl.value) : 10);
+            let wisMod = getMod(wisEl ? parseInt(wisEl.value) : 10);
+            let chaMod = getMod(chaEl ? parseInt(chaEl.value) : 10);
 
             formatValue('str-mod', strMod);
             formatValue('dex-mod', dexMod);
@@ -1863,7 +1926,8 @@
                 let calculatedAc = 10;
                 if (cls === "Barbar") calculatedAc = 10 + dexMod + conMod;
                 else if (cls === "Mönch") calculatedAc = 10 + dexMod + wisMod;
-                document.getElementById('ac').value = calculatedAc;
+                let acField = document.getElementById('ac');
+                if (acField) acField.value = calculatedAc;
             }
 
             let weaponRows = document.querySelectorAll('.weapon-row');
@@ -1945,7 +2009,7 @@
             list.appendChild(wrapper);
         }
 
-        function addWeapon(name = '', magic = 0, dice = '1W12', type = 'Hieb') {
+        function addWeapon(name = '', magic = 0, dice = '1W12') {
             let list = document.getElementById('weapons-list');
             if (!list) return;
             let newRow = document.createElement('div');
@@ -2009,12 +2073,19 @@
 
             let btnToggle = document.getElementById('btn-toggle-rage');
             data.isRaging = (btnToggle && btnToggle.classList.contains('active'));
-            data.rageCurr = document.getElementById('rage-curr').value;
-            data.rageMax = document.getElementById('rage-max').value;
-            data.kiCurr = document.getElementById('ki-curr').value;
-            data.surgeCurr = document.getElementById('surge-curr').value;
-            data.windCurr = document.getElementById('wind-curr').value;
-            data.wildformCurr = document.getElementById('wildform-curr').value;
+            let rCurr = document.getElementById('rage-curr');
+            let rMax = document.getElementById('rage-max');
+            let kiCurr = document.getElementById('ki-curr');
+            let sCurr = document.getElementById('surge-curr');
+            let wCurr = document.getElementById('wind-curr');
+            let wWild = document.getElementById('wildform-curr');
+
+            if (rCurr) data.rageCurr = rCurr.value;
+            if (rMax) data.rageMax = rMax.value;
+            if (kiCurr) data.kiCurr = kiCurr.value;
+            if (sCurr) data.surgeCurr = sCurr.value;
+            if (wCurr) data.windCurr = wCurr.value;
+            if (wWild) data.wildformCurr = wWild.value;
 
             data.conditions = {
                 poisoned: document.getElementById('cond-poisoned').classList.contains('active'),
@@ -2025,32 +2096,43 @@
 
             let weapons = [];
             document.querySelectorAll('.weapon-row').forEach(row => {
+                let wName = row.querySelector('.weapon-name');
+                let wMag = row.querySelector('.weapon-magic');
+                let wDice = row.querySelector('.weapon-dice');
                 weapons.push({
-                    name: row.querySelector('.weapon-name').value,
-                    magic: row.querySelector('.weapon-magic').value,
-                    dice: row.querySelector('.weapon-dice').value
+                    name: wName ? wName.value : '',
+                    magic: wMag ? wMag.value : '0',
+                    dice: wDice ? wDice.value : '1W8'
                 });
             });
             data.weapons = weapons;
 
             let spells = [];
             document.querySelectorAll('.spell-row-wrapper').forEach(wrapper => {
+                let sPrep = wrapper.querySelector('.spell-prep');
+                let sName = wrapper.querySelector('.spell-name');
+                let sLvl = wrapper.querySelector('.spell-level');
+                let sTime = wrapper.querySelector('.spell-time');
+                let sConc = wrapper.querySelector('.spell-conc');
+                let sNotes = wrapper.querySelector('.spell-notes');
                 spells.push({
-                    prep: wrapper.querySelector('.spell-prep').checked,
-                    name: wrapper.querySelector('.spell-name').value,
-                    level: wrapper.querySelector('.spell-level').value,
-                    time: wrapper.querySelector('.spell-time').value,
-                    conc: wrapper.querySelector('.spell-conc').checked,
-                    notes: wrapper.querySelector('.spell-notes').value
+                    prep: sPrep ? sPrep.checked : false,
+                    name: sName ? sName.value : '',
+                    level: sLvl ? sLvl.value : '0',
+                    time: sTime ? sTime.value : '',
+                    conc: sConc ? sConc.checked : false,
+                    notes: sNotes ? sNotes.value : ''
                 });
             });
             data.spells = spells;
 
             let potions = [];
             document.querySelectorAll('#potions-container .char-select-card').forEach(card => {
+                let pType = card.querySelector('.potion-type');
+                let pCount = card.querySelector('.potion-count');
                 potions.push({
-                    type: card.querySelector('.potion-type').value,
-                    count: card.querySelector('.potion-count').value
+                    type: pType ? pType.value : '',
+                    count: pCount ? pCount.value : '1'
                 });
             });
             data.potions = potions;
@@ -2059,10 +2141,15 @@
 
             let chars = getCharactersList();
             let cIndex = chars.findIndex(c => c.id === currentActiveCharId);
-            let cName = document.getElementById('char-name').value || 'Helden-Charakter';
-            let cClass = document.getElementById('char-class').value || 'Unbekannt';
-            let cSub = document.getElementById('char-subclass').value || '';
-            let cLvl = document.getElementById('char-level').value || '1';
+            let nameEl = document.getElementById('char-name');
+            let classEl = document.getElementById('char-class');
+            let subEl = document.getElementById('char-subclass');
+            let lvlEl = document.getElementById('char-level');
+
+            let cName = nameEl ? nameEl.value : 'Helden-Charakter';
+            let cClass = classEl ? classEl.value : 'Abenteurer';
+            let cSub = subEl ? subEl.value : '';
+            let cLvl = lvlEl ? lvlEl.value : '1';
 
             if (cIndex >= 0) {
                 chars[cIndex] = { id: currentActiveCharId, name: cName, clazz: cClass, subclass: cSub, level: cLvl };
