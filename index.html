@@ -94,9 +94,12 @@
 </head>
 <body>
 
-    <!-- Header -->
+    <!-- Header mit Changelog & User-Anzeige -->
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h1 style="font-size: 1.2rem; color: #fff;">D&D 5E LIVE DASHBOARD</h1>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <h1 style="font-size: 1.2rem; color: #fff;">D&D 5E LIVE DASHBOARD</h1>
+            <button class="btn" style="padding: 2px 8px; font-size: 0.75rem;" onclick="toggleChangelogModal(true)">v0.5.1</button>
+        </div>
         <div id="user-display-name" style="font-size: 0.85rem; color: var(--accent); font-weight: bold;"></div>
     </div>
 
@@ -122,6 +125,19 @@
             <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Als was möchtest du diesen Tab verwenden?</p>
             <button class="btn-primary" style="width: 100%; padding: 12px; margin-bottom: 10px;" onclick="selectRole('player')">🗡️ Spieler Ansicht</button>
             <button class="btn" style="width: 100%; padding: 12px;" onclick="selectRole('dm')">👑 Spielleiter (DM) Ansicht</button>
+        </div>
+    </div>
+
+    <!-- CHANGELOG MODAL -->
+    <div id="changelog-modal" class="overlay hidden">
+        <div class="modal-card" style="max-width: 450px; text-align: left;">
+            <h2>Changelog (v0.5.1)</h2>
+            <ul style="color: var(--text-muted); font-size: 0.85rem; margin-left: 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 6px;">
+                <li><b>Single-Session-Schutz:</b> Verhindert gleichzeitige Logins desselben Accounts auf mehreren Geräten.</li>
+                <li><b>DM-Raumbestätigung:</b> Räume wechseln nun per Klick auf den Bestätigungs-Button.</li>
+                <li><b>Kick-Funktion:</b> Spielleiter können unerwünschte Charaktere direkt aus dem Raum werfen.</li>
+            </ul>
+            <button class="btn-primary" style="width: 100%;" onclick="toggleChangelogModal(false)">Schließen</button>
         </div>
     </div>
 
@@ -441,6 +457,11 @@
             location.reload();
         }
 
+        function toggleChangelogModal(show) {
+            let modal = document.getElementById('changelog-modal');
+            if (modal) modal.classList.toggle('hidden', !show);
+        }
+
         function joinRoom() {
             let codeInput = document.getElementById('join-room-input');
             if (!codeInput) return;
@@ -454,7 +475,6 @@
             alert("Erfolgreich dem Raum '" + code + "' beigetreten!");
         }
 
-        // Neu: DM muss den Raum explizit bestätigen mit Button-Klick
         function confirmDMRoom() {
             let dmInput = document.getElementById('dm-room-code-input');
             if (!dmInput) return;
@@ -470,7 +490,6 @@
             alert("👑 DM-Raum aktiv gewechselt zu: " + activeRoom);
         }
 
-        // Neu: DM kann einen Charakter aus dem Raum kicken
         function dmKickCharacter(charKey) {
             if (!confirm("Möchtest du diesen Charakter wirklich aus dem Raum werfen?")) return;
             if (!isCloudActive || !db) return;
