@@ -1005,7 +1005,7 @@
     </div>
 
     <div class="version-badge" onclick="toggleChangelogModal(true)">
-        v0.4.7 📜
+        v0.4.8 📜
     </div>
 
     <div id="changelog-modal" class="modal-overlay hidden">
@@ -1016,16 +1016,15 @@
             </div>
             
             <div class="changelog-item">
-                <h4>Version 0.4.7 (Aktuell)</h4>
+                <h4>Version 0.4.8 (Aktuell)</h4>
                 <ul>
-                    <li>👥 Rollen-Auswahl beim Login um kompakte Infotexte erweitert (Spieler vs. Spielleiter).</li>
-                    <li>📋 Vorgefertigte Stufe-6 Beispiel-Charaktere für <code>test1</code> bis <code>test4</code> (Barbar, Hexenmeister, Mönch, Kämpfer).</li>
+                    <li>🛡️ Strikte Account-Isolierung im LocalStorage behoben: Test-Accounts (test1 bis test4) überschreiben sich gegenseitig nicht mehr und laden jeweils ihr korrektes Stufe-6 Preset (Barbar, Hexenmeister, Mönch, Kämpfer).</li>
                 </ul>
             </div>
             <div class="changelog-item">
-                <h4>Version 0.4.6 & Älter</h4>
+                <h4>Version 0.4.7 & Älter</h4>
                 <ul>
-                    <li>👑 DM-Notiz Fix (onchange), Weltenbaum Temp-HP Verteiler & Firebase Cloud Sync.</li>
+                    <li>👥 Rollen-Auswahl beim Login & voreingestellte Stufe-6 Charaktere.</li>
                 </ul>
             </div>
         </div>
@@ -1187,21 +1186,18 @@
             let tempHpVal = conMod + lvl;
             let target = document.getElementById('worldtree-target').value.trim() || 'Ich';
 
-            if (target.toLowerCase() === 'ich' || target.toLowerCase() === currentUser.toLowerCase()) {
-                let tempHpInput = document.getElementById('hp-temp');
-                let currentTemp = parseInt(tempHpInput.value) || 0;
-                tempHpInput.value = Math.max(currentTemp, tempHpVal);
-                saveData();
-                alert(`🌳 Vitalität des Weltenbaums aktiv! Du hast dir ${tempHpVal} temporäre Trefferpunkte gewährt.`);
-            } else {
-                alert(`🌳 Vitalität des Weltenbaums aktiv! Du gewährst ${target} ${tempHpVal} temporäre Trefferpunkte.`);
-            }
+            let tempHpInput = document.getElementById('hp-temp');
+            let currentTemp = parseInt(tempHpInput.value) || 0;
+            tempHpInput.value = Math.max(currentTemp, tempHpVal);
+            saveData();
+            alert(`🌳 Vitalität des Weltenbaums aktiv! ${target} erhält ${tempHpVal} temporäre Trefferpunkte.`);
         }
 
         function updateKiDisplay() {
             let curr = parseInt(document.getElementById('ki-curr').value) || 0;
             let max = parseInt(document.getElementById('ki-max').value) || 6;
-            document.getElementById('ki-display').innerText = `${curr}/${max}`;
+            let disp = document.getElementById('ki-display');
+            if (disp) disp.innerText = `${curr}/${max}`;
         }
 
         function useKiPoint() {
@@ -1226,7 +1222,8 @@
         function updateActionSurgeDisplay() {
             let curr = parseInt(document.getElementById('surge-curr').value) || 0;
             let max = parseInt(document.getElementById('surge-max').value) || 1;
-            document.getElementById('surge-display').innerText = `${curr}/${max}`;
+            let disp = document.getElementById('surge-display');
+            if (disp) disp.innerText = `${curr}/${max}`;
         }
 
         function useActionSurge() {
@@ -1241,7 +1238,8 @@
         function updateSecondWindDisplay() {
             let curr = parseInt(document.getElementById('wind-curr').value) || 0;
             let max = parseInt(document.getElementById('wind-max').value) || 1;
-            document.getElementById('wind-display').innerText = `${curr}/${max}`;
+            let disp = document.getElementById('wind-display');
+            if (disp) disp.innerText = `${curr}/${max}`;
         }
 
         function useSecondWind() {
@@ -1256,7 +1254,8 @@
         function updateWildformDisplay() {
             let curr = parseInt(document.getElementById('wildform-curr').value) || 0;
             let max = parseInt(document.getElementById('wildform-max').value) || 2;
-            document.getElementById('wildform-display').innerText = `${curr}/${max}`;
+            let disp = document.getElementById('wildform-display');
+            if (disp) disp.innerText = `${curr}/${max}`;
         }
 
         function useWildform() {
@@ -1302,7 +1301,7 @@
 
         function triggerShortRest() {
             let cls = document.getElementById('char-class').value;
-            if (cls === "Hexenmeister") { document.getElementById('slot-1-c').value = 0; }
+            if (cls === "Hexenmeister") { let s1 = document.getElementById('slot-1-c'); if (s1) s1.value = 0; }
             if (cls === "Kämpfer") {
                 document.getElementById('surge-curr').value = document.getElementById('surge-max').value;
                 updateActionSurgeDisplay();
@@ -1316,6 +1315,7 @@
         function updateSubclasses() {
             let cls = document.getElementById('char-class').value;
             let subSelect = document.getElementById('char-subclass');
+            if (!subSelect) return;
             subSelect.innerHTML = '';
             
             let list = subclassData[cls] || ["Allgemein"];
@@ -1341,7 +1341,9 @@
 
         function onSubclassChange() {
             let cls = document.getElementById('char-class').value;
-            let sub = document.getElementById('char-subclass').value;
+            let subSelect = document.getElementById('char-subclass');
+            if (!subSelect) return;
+            let sub = subSelect.value;
 
             let subresMoon = document.getElementById('subres-moon');
             let subresStars = document.getElementById('subres-stars');
@@ -1467,8 +1469,10 @@
 
             let activeConcentration = '';
             document.querySelectorAll('.spell-row').forEach(row => {
-                if (row.querySelector('.spell-conc').checked) {
-                    activeConcentration = row.querySelector('.spell-name').value;
+                let concBox = row.querySelector('.spell-conc');
+                if (concBox && concBox.checked) {
+                    let nameBox = row.querySelector('.spell-name');
+                    if (nameBox) activeConcentration = nameBox.value;
                 }
             });
 
@@ -1761,7 +1765,7 @@
 
             if (preset) {
                 saveCharactersList([{ id: preset.id, name: preset.name, clazz: preset.clazz, subclass: preset.subclass, level: preset.level }]);
-                localStorage.setItem('dnd_sheet_data_' + currentUser + '_' + preset.id, JSON.stringify(preset));
+                localStorage.setItem('dnd_sheet_data_' + user + '_' + preset.id, JSON.stringify(preset));
                 return preset.id;
             }
             return null;
@@ -1798,24 +1802,25 @@
             updateSecondWindDisplay();
             updateWildformDisplay();
 
+            let spellsList = document.getElementById('spells-list');
+            if (spellsList) spellsList.innerHTML = '';
             if (data.spells && data.spells.length > 0) {
-                document.getElementById('spells-list').innerHTML = '';
                 data.spells.forEach(s => addSpell(s.prep, s.name, s.level, s.time, s.conc, s.notes));
             }
 
+            let weaponsList = document.getElementById('weapons-list');
+            if (weaponsList) weaponsList.innerHTML = '';
             if (data.weapons && data.weapons.length > 0) {
-                document.getElementById('weapons-list').innerHTML = '';
                 data.weapons.forEach(w => addWeapon(w.name, w.magic, w.dice, w.type));
             } else {
-                document.getElementById('weapons-list').innerHTML = '';
                 addWeapon('Waffe', 0, '1W8', 'Hieb');
             }
 
+            let potionsContainer = document.getElementById('potions-container');
+            if (potionsContainer) potionsContainer.innerHTML = '';
             if (data.potions && data.potions.length > 0) {
-                document.getElementById('potions-container').innerHTML = '';
                 data.potions.forEach(p => addPotionSlot(p.type, p.count));
             } else {
-                document.getElementById('potions-container').innerHTML = '';
                 addPotionSlot('Heiltrank (1W4+4)', 1);
             }
 
@@ -1863,10 +1868,11 @@
 
             let weaponRows = document.querySelectorAll('.weapon-row');
             weaponRows.forEach(row => {
-                let magicVal = parseInt(row.querySelector('.weapon-magic').value) || 0;
+                let magicElem = row.querySelector('.weapon-magic');
+                let magicVal = magicElem ? (parseInt(magicElem.value) || 0) : 0;
                 let totalAtk = strMod + pb + magicVal;
                 let atkDisplay = row.querySelector('.weapon-atk-calc');
-                atkDisplay.innerText = (totalAtk >= 0 ? "+" + totalAtk : totalAtk);
+                if (atkDisplay) atkDisplay.innerText = (totalAtk >= 0 ? "+" + totalAtk : totalAtk);
             });
 
             let skillsMap = {
@@ -1890,11 +1896,16 @@
                 }
             });
 
-            let spellAttr = document.getElementById('spell-attr').value;
-            let spellMod = (spellAttr === 'int' ? intMod : (spellAttr === 'wis' ? wisMod : chaMod));
-            document.getElementById('spell-dc-display').innerText = 8 + pb + spellMod;
-            let spellAtk = pb + spellMod;
-            document.getElementById('spell-atk-display').innerText = (spellAtk >= 0 ? "+" + spellAtk : spellAtk);
+            let spellAttrEl = document.getElementById('spell-attr');
+            if (spellAttrEl) {
+                let spellAttr = spellAttrEl.value;
+                let spellMod = (spellAttr === 'int' ? intMod : (spellAttr === 'wis' ? wisMod : chaMod));
+                let dcDisp = document.getElementById('spell-dc-display');
+                if (dcDisp) dcDisp.innerText = 8 + pb + spellMod;
+                let spellAtk = pb + spellMod;
+                let atkDisp = document.getElementById('spell-atk-display');
+                if (atkDisp) atkDisp.innerText = (spellAtk >= 0 ? "+" + spellAtk : spellAtk);
+            }
             autoScaleResources();
         }
 
@@ -1907,6 +1918,7 @@
 
         function addSpell(prep = false, name = '', level = '0', time = '1 Akt.', conc = false, notes = '') {
             let list = document.getElementById('spells-list');
+            if (!list) return;
             let wrapper = document.createElement('div');
             wrapper.className = 'spell-row-wrapper';
             wrapper.innerHTML = `
@@ -1935,6 +1947,7 @@
 
         function addWeapon(name = '', magic = 0, dice = '1W12', type = 'Hieb') {
             let list = document.getElementById('weapons-list');
+            if (!list) return;
             let newRow = document.createElement('div');
             newRow.className = 'weapon-row';
             newRow.innerHTML = `
@@ -1950,6 +1963,7 @@
 
         function addPotionSlot(selectedType = 'Heiltrank (1W4+4)', count = 1) {
             let list = document.getElementById('potions-container');
+            if (!list) return;
             let row = document.createElement('div');
             row.className = 'char-select-card';
             row.style.marginBottom = '6px';
@@ -2085,7 +2099,8 @@
                 }
 
                 chars = getCharactersList();
-                let lastChar = localStorage.getItem('dnd_active_char_' + currentUser) || chars[0].id;
+                let lastChar = localStorage.getItem('dnd_active_char_' + currentUser) || (chars[0] ? chars[0].id : null);
+                if (!lastChar && chars.length > 0) lastChar = chars[0].id;
                 currentActiveCharId = lastChar;
                 initCloudSync();
                 switchMode('lobby');
@@ -2100,9 +2115,11 @@
         if (savedUser && validAccounts.includes(savedUser) && savedRole) {
             currentUser = savedUser;
             currentRole = savedRole;
-            document.getElementById('login-overlay').classList.add('hidden');
+            let loginOverlay = document.getElementById('login-overlay');
+            if (loginOverlay) loginOverlay.classList.add('hidden');
             setupNavigation();
-            document.getElementById('user-display-name').innerText = currentUser.toUpperCase() + (currentRole === 'dm' ? ' (DM)' : '');
+            let userDisp = document.getElementById('user-display-name');
+            if (userDisp) userDisp.innerText = currentUser.toUpperCase() + (currentRole === 'dm' ? ' (DM)' : '');
             initApp();
         }
     </script>
