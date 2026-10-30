@@ -42,11 +42,11 @@
         .btn-remove:hover { background: var(--neg-color); color: #fff; }
         .btn-rest { background: #21262d; border: 1px solid var(--card-border); color: var(--text-color); }
 
-        /* Navigation */
-        #main-nav { display: grid; gap: 8px; margin-bottom: 15px; }
-        .mode-btn { background: var(--card-bg); border: 1px solid var(--card-border); padding: 12px; border-radius: 6px; text-align: center; color: var(--text-muted); font-weight: bold; }
-        .mode-btn.active { border-color: var(--accent); color: var(--accent); background: #1f242c; }
-        .btn-logout-nav { border-color: var(--neg-color); color: var(--neg-color); }
+        /* Navigation Bar (Exact Original Style) */
+        #main-nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px; background: var(--card-bg); border: 1px solid var(--card-border); padding: 8px; border-radius: 8px; }
+        .mode-btn { background: transparent; border: none; padding: 10px; border-radius: 6px; text-align: center; color: var(--text-muted); font-weight: bold; cursor: pointer; }
+        .mode-btn.active { border: 1px solid var(--card-border); color: var(--text-color); background: #21262d; }
+        .btn-logout-nav { color: var(--neg-color); border: 1px solid rgba(248,81,73,0.3); background: rgba(248,81,73,0.05); }
 
         /* Cards & UI Elements */
         .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px; padding: 15px; margin-bottom: 15px; }
@@ -81,7 +81,6 @@
         .badge-rage { background: rgba(248,81,73,0.2); color: var(--neg-color); border: 1px solid var(--neg-color); }
         .badge-conc { background: rgba(88,166,255,0.2); color: var(--accent); border: 1px solid var(--accent); }
         .badge-cond { background: rgba(210,153,34,0.2); color: var(--warning-color); border: 1px solid var(--warning-color); }
-        .badge-transform { background: rgba(63,185,80,0.2); color: var(--pos-color); border: 1px solid var(--pos-color); }
 
         .char-select-card { background: #0d1117; border: 1px solid var(--card-border); border-radius: 6px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .char-select-info h3 { border: none; padding: 0; margin: 0; color: #fff; text-transform: none; }
@@ -94,17 +93,18 @@
 </head>
 <body>
 
-    <!-- Header mit Changelog & User-Anzeige -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <h1 style="font-size: 1.2rem; color: #fff;">D&D 5E LIVE DASHBOARD</h1>
-            <button class="btn" style="padding: 2px 8px; font-size: 0.75rem;" onclick="toggleChangelogModal(true)">v0.5.1</button>
-        </div>
-        <div id="user-display-name" style="font-size: 0.85rem; color: var(--accent); font-weight: bold;"></div>
+    <!-- Header -->
+    <div style="text-align: center; margin-bottom: 15px;">
+        <h1 style="font-size: 1.4rem; color: #fff; letter-spacing: 1px;">D&D 5E LIVE DASHBOARD</h1>
     </div>
 
-    <!-- Navigation Bar -->
-    <div id="main-nav" class="hidden"></div>
+    <!-- Navigation Bar (Original Structure with Logout) -->
+    <div id="main-nav" class="hidden">
+        <button type="button" class="mode-btn active" id="btn-mode-lobby" onclick="switchMode('lobby')">LOBBY</button>
+        <button type="button" class="mode-btn" id="btn-mode-sheet" onclick="switchMode('sheet')">CHARAKTER</button>
+        <button type="button" class="mode-btn" id="btn-mode-party" onclick="switchMode('party')">PARTY LIVE</button>
+        <button type="button" class="mode-btn btn-logout-nav" onclick="logout()">ABMELDEN 🚪</button>
+    </div>
 
     <!-- LOGIN OVERLAY -->
     <div id="login-overlay" class="overlay">
@@ -128,27 +128,14 @@
         </div>
     </div>
 
-    <!-- CHANGELOG MODAL -->
-    <div id="changelog-modal" class="overlay hidden">
-        <div class="modal-card" style="max-width: 450px; text-align: left;">
-            <h2>Changelog (v0.5.1)</h2>
-            <ul style="color: var(--text-muted); font-size: 0.85rem; margin-left: 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 6px;">
-                <li><b>Single-Session-Schutz:</b> Verhindert gleichzeitige Logins desselben Accounts auf mehreren Geräten.</li>
-                <li><b>DM-Raumbestätigung:</b> Räume wechseln nun per Klick auf den Bestätigungs-Button.</li>
-                <li><b>Kick-Funktion:</b> Spielleiter können unerwünschte Charaktere direkt aus dem Raum werfen.</li>
-            </ul>
-            <button class="btn-primary" style="width: 100%;" onclick="toggleChangelogModal(false)">Schließen</button>
-        </div>
-    </div>
-
     <!-- VIEW: LOBBY -->
     <div id="view-lobby" class="hidden">
         <div class="card">
-            <h3>DM-Lobby & Raum-Beitritt</h3>
+            <h3>DM-Lobby & Raum-Beitritt (<span id="lobby-user-tag" style="color:var(--accent);"></span>)</h3>
             <label>Vom DM erhaltener Raum-Code</label>
             <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                 <input type="text" id="join-room-input" value="zarthul-gruppe">
-                <button class="btn-primary" onclick="joinRoom()">Raum beitreten</button>
+                <button class="btn-primary" onclick="joinRoom()" style="background-color: var(--pos-color);">RAUM BEITRETEN</button>
             </div>
             <div id="sync-status" style="font-size: 0.8rem; text-align: center; color: var(--text-muted);">Lokal Modus</div>
         </div>
@@ -193,7 +180,7 @@
     <!-- VIEW: CHARACTER SHEET -->
     <div id="view-sheet" class="hidden">
         <div style="display: flex; justify-content: space-between; gap: 10px; margin-bottom: 15px;">
-            <button class="btn-primary btn-save-compact" style="flex-grow: 1;" onclick="manualSaveWithFeedback()">💾 Speichern</button>
+            <button class="btn-primary btn-save-compact" style="flex-grow: 1; background-color: var(--accent-hover);" onclick="manualSaveWithFeedback()">💾 Speichern</button>
             <button class="btn-rest" onclick="triggerShortRest()">☕ Kurze Rast</button>
             <button class="btn-rest" onclick="triggerLongRest()">🏕️ Lange Rast</button>
         </div>
@@ -203,12 +190,7 @@
             <h3>Helden-Profil</h3>
             <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; margin-bottom: 8px;">
                 <div><label>Name</label><input type="text" id="char-name" oninput="saveData()"></div>
-                <div><label>Stufe</label><input type="number" id="char-level" value="1" oninput="autoScaleResources(); updateAllCalculations(); saveData();"></div>
-                <div><label>ÜB-Bonus</label><input type="number" id="pb" value="2" oninput="updateAllCalculations(); saveData();"></div>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                <div>
-                    <label>Klasse</label>
+                <div><label>Klasse</label>
                     <select id="char-class" onchange="onClassChange(); saveData();">
                         <option value="Barbar">Barbar</option>
                         <option value="Barde">Barde</option>
@@ -224,36 +206,12 @@
                         <option value="Magier">Magier</option>
                     </select>
                 </div>
-                <div>
-                    <label>Subklasse</label>
+                <div><label>Subklasse / Pfad</label>
                     <select id="char-subclass" onchange="onSubclassChange(); saveData();"></select>
                 </div>
             </div>
-        </div>
-
-        <!-- Combat Stats -->
-        <div class="card">
-            <h3>Kampfwerte</h3>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
-                <div><label>Aktuelle HP</label><input type="number" id="hp-curr" value="10" oninput="saveData()"></div>
-                <div><label>Max HP</label><input type="number" id="hp-max" value="10" oninput="saveData()"></div>
-                <div><label>Temp HP</label><input type="number" id="hp-temp" value="0" oninput="saveData()"></div>
-                <div><label>Rüstungsklasse (AC)</label><input type="number" id="ac" value="10" oninput="saveData()"></div>
-            </div>
-            <div style="margin-top: 8px; display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 0.75rem; color: var(--text-muted);">Automatische Rüstungsklasse (Barbar/Mönch)</span>
-                <input type="checkbox" id="auto-ac-toggle" onchange="updateAllCalculations(); saveData();">
-            </div>
-        </div>
-
-        <!-- Zustände -->
-        <div class="card">
-            <h3>Zustände & Effekte</h3>
-            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                <button type="button" class="btn-rest" id="cond-poisoned" onclick="toggleCondition('poisoned')">☣️ Vergiftet</button>
-                <button type="button" class="btn-rest" id="cond-stunned" onclick="toggleCondition('stunned')">💫 Betäubt</button>
-                <button type="button" class="btn-rest" id="cond-prone" onclick="toggleCondition('prone')">🛌 Liegend</button>
-                <button type="button" class="btn-rest" id="cond-paralyzed" onclick="toggleCondition('paralyzed')">⚡ Gelähmt</button>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
+                <div><label>Stufe</label><input type="number" id="char-level" value="1" oninput="autoScaleResources(); updateAllCalculations(); saveData();"></div>
             </div>
         </div>
 
@@ -309,16 +267,112 @@
             <input type="hidden" id="wildform-curr" value="2"><input type="hidden" id="wildform-max" value="2">
         </div>
 
-        <!-- Attribute & Skills -->
+        <!-- Kampfwerte & Zustände -->
         <div class="card">
-            <h3>Attribute & Boni</h3>
-            <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; text-align: center;">
-                <div><label>ST</label><input type="number" id="str" value="10" oninput="updateAllCalculations(); saveData();"><div id="str-mod" class="calc-display">+0</div></div>
-                <div><label>GE</label><input type="number" id="dex" value="10" oninput="updateAllCalculations(); saveData();"><div id="dex-mod" class="calc-display">+0</div></div>
-                <div><label>KO</label><input type="number" id="con" value="10" oninput="updateAllCalculations(); saveData();"><div id="con-mod" class="calc-display">+0</div></div>
-                <div><label>IN</label><input type="number" id="int" value="10" oninput="updateAllCalculations(); saveData();"><div id="int-mod" class="calc-display">+0</div></div>
-                <div><label>WE</label><input type="number" id="wis" value="10" oninput="updateAllCalculations(); saveData();"><div id="wis-mod" class="calc-display">+0</div></div>
-                <div><label>CH</label><input type="number" id="cha" value="10" oninput="updateAllCalculations(); saveData();"><div id="cha-mod" class="calc-display">+0</div></div>
+            <h3>Kampfwerte & Zustände</h3>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px;">
+                <div><label>Aktuelle HP</label><input type="number" id="hp-curr" value="10" oninput="saveData()"></div>
+                <div><label>Max HP</label><input type="number" id="hp-max" value="10" oninput="saveData()"></div>
+                <div><label>Temp HP</label><input type="number" id="hp-temp" value="0" oninput="saveData()"></div>
+                <div><label>Rüstung (AC)</label><input type="number" id="ac" value="10" oninput="saveData()"></div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                <div><label>Übungsbonus</label><input type="number" id="pb" value="2" oninput="updateAllCalculations(); saveData();"><div id="pb-display" class="calc-display" style="margin-top:2px;">+2</div></div>
+                <div><label>Initiative</label><input type="number" id="init" value="2" oninput="saveData()"></div>
+            </div>
+            <div style="margin-top: 8px; display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 0.75rem; color: var(--text-muted);">Ungerüstete Rüstungsklasse (Auto AC)</span>
+                <input type="checkbox" id="auto-ac-toggle" onchange="updateAllCalculations(); saveData();">
+            </div>
+            <div style="margin-top: 10px;">
+                <label style="color: var(--warning-color);">Aktive Zustände (sichtbar für DM)</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
+                    <button type="button" class="btn-rest" id="cond-poisoned" onclick="toggleCondition('poisoned')">☣️ Vergiftet</button>
+                    <button type="button" class="btn-rest" id="cond-stunned" onclick="toggleCondition('stunned')">💫 Betäubt</button>
+                    <button type="button" class="btn-rest" id="cond-prone" onclick="toggleCondition('prone')">🛌 Liegend</button>
+                    <button type="button" class="btn-rest" id="cond-paralyzed" onclick="toggleCondition('paralyzed')">⚡ Gelähmt</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attribute & Fertigkeiten -->
+        <div class="card">
+            <h3>Attribute & Fertigkeiten</h3>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                <!-- ST -->
+                <div style="background: #0d1117; padding: 8px; border-radius: 6px; border: 1px solid var(--card-border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label style="margin:0;">Stärke (STR)</label>
+                        <input type="number" id="str" value="10" oninput="updateAllCalculations(); saveData();" style="width: 50px;">
+                        <div id="str-mod" class="calc-display">+0</div>
+                    </div>
+                    <div style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 2px; margin-top: 6px;">
+                        <label><input type="checkbox" id="save-str" onchange="updateAllCalculations(); saveData()"> Rettungswurf</label>
+                        <label><input type="checkbox" id="skill-athletics" onchange="updateAllCalculations(); saveData()"> Athletik</label>
+                    </div>
+                </div>
+                <!-- GE -->
+                <div style="background: #0d1117; padding: 8px; border-radius: 6px; border: 1px solid var(--card-border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label style="margin:0;">Geschick (DEX)</label>
+                        <input type="number" id="dex" value="10" oninput="updateAllCalculations(); saveData();" style="width: 50px;">
+                        <div id="dex-mod" class="calc-display">+0</div>
+                    </div>
+                    <div style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 2px; margin-top: 6px;">
+                        <label><input type="checkbox" id="save-dex" onchange="updateAllCalculations(); saveData()"> Rettungswurf</label>
+                        <label><input type="checkbox" id="skill-acrobatics" onchange="updateAllCalculations(); saveData()"> Akrobatik</label>
+                        <label><input type="checkbox" id="skill-sleight" onchange="updateAllCalculations(); saveData()"> Fingerfertigkeit</label>
+                        <label><input type="checkbox" id="skill-stealth" onchange="updateAllCalculations(); saveData()"> Heimlichkeit</label>
+                    </div>
+                </div>
+                <!-- KO -->
+                <div style="background: #0d1117; padding: 8px; border-radius: 6px; border: 1px solid var(--card-border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label style="margin:0;">Konstitution (CON)</label>
+                        <input type="number" id="con" value="10" oninput="updateAllCalculations(); saveData();" style="width: 50px;">
+                        <div id="con-mod" class="calc-display">+0</div>
+                    </div>
+                    <div style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 2px; margin-top: 6px;">
+                        <label><input type="checkbox" id="save-con" onchange="updateAllCalculations(); saveData()"> Rettungswurf</label>
+                    </div>
+                </div>
+                <!-- IN -->
+                <div style="background: #0d1117; padding: 8px; border-radius: 6px; border: 1px solid var(--card-border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label style="margin:0;">Intelligenz (INT)</label>
+                        <input type="number" id="int" value="10" oninput="updateAllCalculations(); saveData();" style="width: 50px;">
+                        <div id="int-mod" class="calc-display">+0</div>
+                    </div>
+                    <div style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 2px; margin-top: 6px;">
+                        <label><input type="checkbox" id="save-int" onchange="updateAllCalculations(); saveData()"> Rettungswurf</label>
+                        <label><input type="checkbox" id="skill-arcana" onchange="updateAllCalculations(); saveData()"> Arkane Kunde</label>
+                        <label><input type="checkbox" id="skill-history" onchange="updateAllCalculations(); saveData()"> Geschichte</label>
+                    </div>
+                </div>
+                <!-- WE -->
+                <div style="background: #0d1117; padding: 8px; border-radius: 6px; border: 1px solid var(--card-border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label style="margin:0;">Weisheit (WIS)</label>
+                        <input type="number" id="wis" value="10" oninput="updateAllCalculations(); saveData();" style="width: 50px;">
+                        <div id="wis-mod" class="calc-display">+0</div>
+                    </div>
+                    <div style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 2px; margin-top: 6px;">
+                        <label><input type="checkbox" id="save-wis" onchange="updateAllCalculations(); saveData()"> Rettungswurf</label>
+                        <label><input type="checkbox" id="skill-perception" onchange="updateAllCalculations(); saveData()"> Wahrnehmung</label>
+                    </div>
+                </div>
+                <!-- CH -->
+                <div style="background: #0d1117; padding: 8px; border-radius: 6px; border: 1px solid var(--card-border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <label style="margin:0;">Charisma (CHA)</label>
+                        <input type="number" id="cha" value="10" oninput="updateAllCalculations(); saveData();" style="width: 50px;">
+                        <div id="cha-mod" class="calc-display">+0</div>
+                    </div>
+                    <div style="font-size: 0.8rem; display: flex; flex-direction: column; gap: 2px; margin-top: 6px;">
+                        <label><input type="checkbox" id="save-cha" onchange="updateAllCalculations(); saveData()"> Rettungswurf</label>
+                        <label><input type="checkbox" id="skill-persuasion" onchange="updateAllCalculations(); saveData()"> Einschüchtern</label>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -327,6 +381,22 @@
             <h3>Waffen & Angriffe</h3>
             <div id="weapons-list"></div>
             <button type="button" class="btn" style="width: 100%; margin-top: 6px;" onclick="addWeapon(); saveData();">+ Waffe hinzufügen</button>
+        </div>
+
+        <!-- Reichtum & Münzen -->
+        <div class="card">
+            <h3>Reichtum & Münzen</h3>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                <div><label>Gold (GP)</label><input type="number" id="coin-gp" value="0" oninput="saveData()"></div>
+                <div><label>Silber (SP)</label><input type="number" id="coin-sp" value="0" oninput="saveData()"></div>
+                <div><label>Kupfer (CP)</label><input type="number" id="coin-cp" value="0" oninput="saveData()"></div>
+            </div>
+        </div>
+
+        <!-- Rucksack & Ausrüstung -->
+        <div class="card">
+            <h3>Rucksack & Ausrüstung</h3>
+            <textarea id="inventory-text" placeholder="Deine Ausrüstung, Gegenstände & Notizen..." oninput="saveData()"></textarea>
         </div>
 
         <!-- Zauber Section -->
@@ -341,8 +411,8 @@
                         <option value="cha">Charisma</option>
                     </select>
                 </div>
-                <div><label>Zauber-Sammel-DC</label><div id="spell-dc-display" class="calc-display" style="padding:8px;">8</div></div>
-                <div><label>Zauber-Angriffsbonus</label><div id="spell-atk-display" class="calc-display" style="padding:8px;">+0</div></div>
+                <div><label>Zauber-DC</label><div id="spell-dc-display" class="calc-display" style="padding:8px;">8</div></div>
+                <div><label>Zauber-Angriff</label><div id="spell-atk-display" class="calc-display" style="padding:8px;">+0</div></div>
             </div>
             <div id="spells-list"></div>
             <button type="button" class="btn" style="width: 100%; margin-top: 6px;" onclick="addSpell(); saveData();">+ Zauber hinzufügen</button>
@@ -424,8 +494,6 @@
             localStorage.setItem('dnd_logged_role', role);
             document.getElementById('role-overlay').classList.add('hidden');
             setupNavigation();
-            let userDisp = document.getElementById('user-display-name');
-            if (userDisp) userDisp.innerText = currentUser.toUpperCase() + (role === 'dm' ? ' (DM)' : '');
             initApp();
             registerSingleSession();
         }
@@ -437,15 +505,15 @@
                 nav.style.gridTemplateColumns = 'repeat(2, 1fr)';
                 nav.innerHTML = `
                     <button type="button" class="mode-btn active" id="btn-mode-dm" onclick="switchMode('dm')">DM Ansicht</button>
-                    <button type="button" class="mode-btn btn-logout-nav" onclick="logout()">Abmelden 🚪</button>
+                    <button type="button" class="mode-btn btn-logout-nav" onclick="logout()">ABMELDEN 🚪</button>
                 `;
             } else {
                 nav.style.gridTemplateColumns = 'repeat(4, 1fr)';
                 nav.innerHTML = `
-                    <button type="button" class="mode-btn active" id="btn-mode-lobby" onclick="switchMode('lobby')">Lobby</button>
-                    <button type="button" class="mode-btn" id="btn-mode-sheet" onclick="switchMode('sheet')">Charakter</button>
-                    <button type="button" class="mode-btn" id="btn-mode-party" onclick="switchMode('party')">Party Live</button>
-                    <button type="button" class="mode-btn btn-logout-nav" onclick="logout()">Abmelden 🚪</button>
+                    <button type="button" class="mode-btn active" id="btn-mode-lobby" onclick="switchMode('lobby')">LOBBY</button>
+                    <button type="button" class="mode-btn" id="btn-mode-sheet" onclick="switchMode('sheet')">CHARAKTER</button>
+                    <button type="button" class="mode-btn" id="btn-mode-party" onclick="switchMode('party')">PARTY LIVE</button>
+                    <button type="button" class="mode-btn btn-logout-nav" onclick="logout()">ABMELDEN 🚪</button>
                 `;
             }
             nav.style.display = 'grid';
@@ -455,11 +523,6 @@
             localStorage.removeItem('dnd_logged_user');
             localStorage.removeItem('dnd_logged_role');
             location.reload();
-        }
-
-        function toggleChangelogModal(show) {
-            let modal = document.getElementById('changelog-modal');
-            if (modal) modal.classList.toggle('hidden', !show);
         }
 
         function joinRoom() {
@@ -513,11 +576,6 @@
             let btn = document.getElementById('cond-' + condName);
             if (btn) btn.classList.toggle('active');
             saveData();
-        }
-
-        function saveDMSecetNote(charKey, noteText) {
-            if (!isCloudActive || !db) return;
-            db.ref('rooms/' + activeRoom + '/characters/' + charKey + '/dmNote').set(noteText);
         }
 
         function updateRageButtonText() {
@@ -1026,6 +1084,9 @@
             let container = document.getElementById('character-list-container');
             let activeInRoomCharId = localStorage.getItem('dnd_room_active_char_' + currentUser + '_' + activeRoom);
 
+            let lobbyUserTag = document.getElementById('lobby-user-tag');
+            if (lobbyUserTag && currentUser) lobbyUserTag.innerText = currentUser.toUpperCase();
+
             if (!container) return;
 
             if (chars.length === 0) {
@@ -1204,6 +1265,8 @@
         function updateAllCalculations() {
             let pbEl = document.getElementById('pb');
             let pb = pbEl ? (parseInt(pbEl.value) || 0) : 0;
+            let pbDisp = document.getElementById('pb-display');
+            if (pbDisp) pbDisp.innerText = (pb >= 0 ? "+" + pb : pb);
 
             let strEl = document.getElementById('str');
             let dexEl = document.getElementById('dex');
@@ -1301,7 +1364,7 @@
             newRow.className = 'weapon-row';
             newRow.innerHTML = `
                 <input type="text" placeholder="Waffe" value="${name}" class="weapon-name" oninput="saveData()">
-                <input type="number" placeholder="0" value="${magic}" class="weapon-magic" oninput="updateAllCalculations(); saveData();">
+                <input type="number" placeholder="0" value="${magic}" class="weapon-magic" oninput="updateAllCalculations(); saveData();" style="width: 50px;">
                 <input type="text" placeholder="1W12" value="${dice}" class="weapon-dice" oninput="saveData()">
                 <div class="calc-display weapon-atk-calc">+0</div>
                 <button type="button" class="btn-remove" onclick="this.parentElement.remove(); saveData();">✕</button>
@@ -1477,8 +1540,6 @@
             let loginOverlay = document.getElementById('login-overlay');
             if (loginOverlay) loginOverlay.classList.add('hidden');
             setupNavigation();
-            let userDisp = document.getElementById('user-display-name');
-            if (userDisp) userDisp.innerText = currentUser.toUpperCase() + (currentRole === 'dm' ? ' (DM)' : '');
             initApp();
         }
     </script>
