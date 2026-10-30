@@ -1,2214 +1,1219 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 5e Live Party-Dashboard & Zauberbuch</title>
-    <!-- Firebase SDK (Cloud Live Sync) -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <style>
-        :root {
-            --bg-color: #0d0f12;
-            --card-bg: #161a22;
-            --accent: #cbd5e1;
-            --accent-glow: rgba(203, 213, 225, 0.2);
-            --text-color: #e2e8f0;
-            --text-muted: #94a3b8;
-            --border-color: #262d3d;
-            --pos-color: #48bb78;
-            --neg-color: #e53e3e;
-            --blue-color: #3b82f6;
-            --warning-color: #f59e0b;
-        }
+<script>
+    const firebaseConfig = {
+        databaseURL: "https://dnd-live-dashboard-default-rtdb.europe-west1.firebasedatabase.app/"
+    };
+    
+    let db = null;
+    let isCloudActive = false;
+    let currentActiveCharId = null;
+    let activeRoom = "zarthul-gruppe";
+    let currentUser = null;
+    let currentRole = null;
+    let mySessionId = 'session_' + Math.random().toString(36).substring(2, 9);
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 12px;
-            padding-bottom: 60px;
-            max-width: 700px;
-            margin-left: auto;
-            margin-right: auto;
-        }
+    const validAccounts = ["admin", "test1", "test2", "test3", "test4"];
 
-        h1 {
-            text-align: center;
-            color: var(--accent);
-            font-size: 1.5rem;
-            margin: 5px 0 15px 0;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
+    const subclassData = {
+        "Barbar": ["Pfad des Weltenbaums", "Pfad des Berserkers", "Pfad des Totemkriegers"],
+        "Barde": ["Kollegium der Lore", "Kollegium der Tapferkeit"],
+        "Kleriker": ["Domäne des Lebens", "Domäne des Lichts", "Domäne des Sturms"],
+        "Druide": ["Zirkel des Mondes", "Zirkel der Sterne", "Zirkel des Landes", "Zirkel des Sporen"],
+        "Kämpfer": ["Meister des Kampfs (Battle Master)", "Champion", "Mystischer Ritter"],
+        "Mönch": ["Weg der Offenen Hand", "Weg des Schattens"],
+        "Paladin": ["Eid der Hingabe", "Eid der Rache"],
+        "Waldläufer": ["Jäger", "Tierherr (Beast Master)"],
+        "Schurke": ["Dieb", "Assassine", "Arcane Trickster"],
+        "Hexenmeister": ["Der Große Alte", "Die Feenwesen-Patronin", "Der Unterweltler"],
+        "Zauberer": ["Drachenblut-Linie", "Wilde Magie"],
+        "Magier": ["Schule der Evokation", "Schule der Abjuration"]
+    };
 
-        .overlay-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--bg-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            padding: 16px;
-            box-sizing: border-box;
-        }
+    function processLogin() {
+        let u = document.getElementById('login-user').value.trim().toLowerCase();
+        let p = document.getElementById('login-pass').value.trim();
+        let err = document.getElementById('login-error');
 
-        .box-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            padding: 20px;
-            border-radius: 12px;
-            width: 100%;
-            max-width: 340px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-            text-align: center;
+        if (validAccounts.includes(u) && p === "0000") {
+            currentUser = u;
+            localStorage.setItem('dnd_logged_user', u);
+            document.getElementById('login-overlay').classList.add('hidden');
+            document.getElementById('role-overlay').classList.remove('hidden');
+        } else {
+            err.innerText = "Ungültiger Benutzername oder Passwort!";
         }
+    }
 
-        .box-card h2 {
-            margin-top: 0;
-            color: var(--accent);
-            font-size: 1.2rem;
-            text-transform: uppercase;
-        }
+    function registerSingleSession() {
+        if (!isCloudActive || !db || !currentUser) return;
+        let sessionRef = db.ref('active_sessions/' + currentUser);
+        sessionRef.set({
+            sessionId: mySessionId,
+            loginTime: Date.now()
+        });
 
-        .box-card input {
-            margin-bottom: 10px;
-        }
+        sessionRef.on('value', (snapshot) => {
+            let data = snapshot.val();
+            if (data && data.sessionId && data.sessionId !== mySessionId) {
+                alert("⚠️ Du wurdest abgemeldet! Dieser Account (" + currentUser.toUpperCase() + ") wurde auf einem anderen Gerät angemeldet.");
+                logout();
+            }
+        });
+    }
 
-        .btn-main {
-            width: 100%;
-            padding: 10px;
-            background-color: var(--pos-color);
-            border: none;
-            color: #0d0f12;
-            font-weight: bold;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            margin-top: 5px;
-        }
+    function selectRole(role) {
+        currentRole = role;
+        localStorage.setItem('dnd_logged_role', role);
+        document.getElementById('role-overlay').classList.add('hidden');
+        setupNavigation();
+        let userDisp = document.getElementById('user-display-name');
+        if (userDisp) userDisp.innerText = currentUser.toUpperCase() + (role === 'dm' ? ' (DM)' : '');
+        initApp();
+        registerSingleSession();
+    }
 
-        .btn-main:hover { opacity: 0.9; }
-        .error-msg { color: var(--neg-color); font-size: 0.75rem; margin-top: 8px; min-height: 15px; }
+    function setupNavigation() {
+        let nav = document.getElementById('main-nav');
+        if (!nav) return;
+        if (currentRole === 'dm') {
+            nav.style.gridTemplateColumns = 'repeat(2, 1fr)';
+            nav.innerHTML = `
+                <button type="button" class="mode-btn active" id="btn-mode-dm" onclick="switchMode('dm')">DM Ansicht</button>
+                <button type="button" class="mode-btn btn-logout-nav" onclick="logout()">Abmelden 🚪</button>
+            `;
+        } else {
+            nav.style.gridTemplateColumns = 'repeat(4, 1fr)';
+            nav.innerHTML = `
+                <button type="button" class="mode-btn active" id="btn-mode-lobby" onclick="switchMode('lobby')">Lobby</button>
+                <button type="button" class="mode-btn" id="btn-mode-sheet" onclick="switchMode('sheet')">Charakter</button>
+                <button type="button" class="mode-btn" id="btn-mode-party" onclick="switchMode('party')">Party Live</button>
+                <button type="button" class="mode-btn btn-logout-nav" onclick="logout()">Abmelden 🚪</button>
+            `;
+        }
+        nav.style.display = 'grid';
+    }
 
-        .role-choice-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 12px;
-            margin-top: 15px;
-        }
+    function logout() {
+        localStorage.removeItem('dnd_logged_user');
+        localStorage.removeItem('dnd_logged_role');
+        location.reload();
+    }
 
-        .role-card-btn {
-            background: #11151d;
-            border: 1px solid var(--border-color);
-            color: var(--accent);
-            padding: 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: left;
-        }
-        .role-card-btn:hover {
-            border-color: var(--accent);
-            background: #1a2233;
-        }
-        .role-title {
-            font-size: 0.9rem;
-            font-weight: bold;
-            display: block;
-            margin-bottom: 4px;
-        }
-        .role-desc {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            line-height: 1.3;
-            display: block;
-        }
+    function joinRoom() {
+        let codeInput = document.getElementById('join-room-input');
+        if (!codeInput) return;
+        let code = codeInput.value.trim().toLowerCase();
+        if (!code) { alert("Bitte gib einen gültigen Raum-Code ein!"); return; }
+        activeRoom = code;
+        localStorage.setItem('dnd_active_room_' + currentUser, code);
+        initCloudSync();
+        saveData();
+        renderCharacterList();
+        alert("Erfolgreich dem Raum '" + code + "' beigetreten!");
+    }
 
-        #view-lobby {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .char-select-card {
-            background: #11151d;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.2s;
-            margin-bottom: 8px;
-        }
-
-        .char-select-info h3 { margin: 0 0 4px 0; color: var(--accent); font-size: 1rem; }
-        .char-select-info p { margin: 0; color: var(--text-muted); font-size: 0.8rem; }
-
-        .switch-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2px;
-        }
-        .switch-label {
-            font-size: 0.65rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            font-weight: bold;
-        }
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 48px;
-            height: 24px;
-        }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: var(--neg-color);
-            transition: .3s;
-            border-radius: 24px;
-        }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .3s;
-            border-radius: 50%;
-        }
-        input:checked + .slider { background-color: var(--pos-color); }
-        input:checked + .slider:before { transform: translateX(24px); }
-
-        .mode-nav {
-            display: grid;
-            gap: 4px;
-            margin-bottom: 14px;
-            background: #11151d;
-            padding: 6px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-        }
-
-        .mode-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            padding: 8px 2px;
-            font-size: 0.65rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-        }
-
-        .mode-btn.active {
-            background-color: var(--card-bg);
-            color: var(--accent);
-            border: 1px solid var(--border-color);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-
-        .btn-logout-nav {
-            color: var(--neg-color) !important;
-        }
-
-        .section {
-            background-color: var(--card-bg);
-            padding: 14px;
-            border-radius: 10px;
-            margin-bottom: 12px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-        }
-
-        .section-title {
-            font-size: 0.85rem;
-            color: var(--accent);
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            font-weight: bold;
-            letter-spacing: 0.5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-        .grid-4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-
-        @media (min-width: 400px) {
-            .grid-4 { grid-template-columns: repeat(4, 1fr); }
-        }
-
-        .attr-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-        @media (min-width: 500px) { .attr-grid { grid-template-columns: 1fr 1fr; } }
-
-        label {
-            display: block;
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            margin-bottom: 3px;
-            text-transform: uppercase;
-            text-align: center;
-        }
-
-        .field-left label { text-align: left; }
-
-        input[type="text"], input[type="number"], input[type="password"], select, textarea {
-            width: 100%;
-            padding: 8px;
-            background-color: #0f1319;
-            border: 1px solid var(--border-color);
-            color: white;
-            border-radius: 6px;
-            box-sizing: border-box;
-            font-size: 1rem;
-            text-align: center;
-        }
-
-        select { cursor: pointer; text-align-last: center; }
-
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: var(--accent);
-            box-shadow: 0 0 5px var(--accent-glow);
-        }
-
-        .field-left input { text-align: left; }
-
-        .stat-box {
-            background: #11151d;
-            padding: 8px;
-            border-radius: 8px;
-            text-align: center;
-            border: 1px solid var(--border-color);
-        }
-
-        .mod-display { font-size: 0.95rem; font-weight: bold; margin-top: 4px; }
-
-        .attr-group {
-            background: #11151d;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .attr-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 6px;
-            margin-bottom: 6px;
-        }
-
-        .attr-title { font-weight: bold; color: var(--accent); font-size: 0.85rem; text-transform: uppercase; }
-        .attr-inputs { display: flex; gap: 6px; align-items: center; }
-        .attr-inputs input { width: 50px; padding: 4px; font-size: 0.9rem; }
-
-        .list-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; font-size: 0.8rem; }
-        .list-row-left { display: flex; align-items: center; gap: 6px; }
-        .list-row-left input[type="checkbox"] { accent-color: var(--pos-color); cursor: pointer; width: 14px; height: 14px; margin: 0; }
-        .list-row span { color: var(--text-muted); }
-        .sub-item { padding-left: 2px; border-top: 1px dotted #202632; }
-
-        .action-btn-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
-        .btn-rest {
-            background: #11151d;
-            border: 1px solid var(--border-color);
-            color: var(--text-color);
-            padding: 6px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .btn-rest:hover { border-color: var(--accent); }
-
-        .btn-save-compact {
-            background-color: transparent;
-            border: 1px solid var(--blue-color);
-            color: #93c5fd;
-            padding: 6px 10px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: all 0.2s;
-        }
-        .btn-save-compact:hover {
-            background-color: rgba(59, 130, 246, 0.15);
-        }
-
-        .btn-action-toggle {
-            width: 100%;
-            padding: 10px;
-            background: #202632;
-            border: 1px solid var(--border-color);
-            color: var(--accent);
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 0.85rem;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: all 0.2s;
-            margin-bottom: 6px;
-        }
-        .btn-action-toggle.active {
-            background: #422026;
-            border-color: var(--neg-color);
-            color: #fc8181;
-            box-shadow: 0 0 10px rgba(229, 62, 62, 0.3);
-        }
-
-        .btn-action-click {
-            width: 100%;
-            padding: 10px;
-            background: #16241b;
-            border: 1px solid var(--pos-color);
-            color: var(--pos-color);
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 0.85rem;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: all 0.2s;
-            margin-bottom: 6px;
-        }
-        .btn-action-click:hover { background: #1f3326; }
-
-        .status-toggle-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 6px;
-            margin-top: 6px;
-        }
-        .status-chip {
-            background: #11151d;
-            border: 1px solid var(--border-color);
-            color: var(--text-muted);
-            padding: 6px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s;
-        }
-        .status-chip.active {
-            background: #422026;
-            border-color: var(--neg-color);
-            color: #fc8181;
-        }
-
-        .slot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
-        .slot-box { background: #11151d; border: 1px solid var(--border-color); border-radius: 6px; padding: 6px; text-align: center; }
-        .slot-box label { font-size: 0.65rem; }
-        .slot-inputs { display: flex; gap: 4px; margin-top: 2px; }
-        .slot-inputs input { font-size: 0.85rem; padding: 4px; }
-
-        .weapon-header {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr 32px;
-            gap: 4px;
-            font-size: 0.65rem;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-            text-align: center;
-            text-transform: uppercase;
-            font-weight: bold;
-        }
-        .weapon-row {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr 32px;
-            gap: 4px;
-            margin-bottom: 6px;
-            align-items: center;
-        }
-        .weapon-row input { padding: 4px; font-size: 0.8rem; }
-        .weapon-atk-calc {
-            background: #11151d;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 6px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 0.85rem;
-            color: var(--pos-color);
-        }
-
-        .spell-header {
-            display: grid;
-            grid-template-columns: 28px 2fr 1fr 1.1fr 28px 28px 32px;
-            gap: 4px;
-            font-size: 0.65rem;
-            color: var(--text-muted);
-            margin-bottom: 6px;
-            text-align: center;
-            text-transform: uppercase;
-            font-weight: bold;
-        }
-        .spell-row-wrapper {
-            background: #11151d;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 6px;
-            margin-bottom: 6px;
-        }
-        .spell-row {
-            display: grid;
-            grid-template-columns: 28px 2fr 1fr 1.1fr 28px 28px 32px;
-            gap: 4px;
-            align-items: center;
-        }
-        .spell-row input, .spell-row select { padding: 4px; font-size: 0.8rem; }
+    // Neu: DM muss den Raum explizit bestätigen mit Button-Klick
+    function confirmDMRoom() {
+        let dmInput = document.getElementById('dm-room-code-input');
+        if (!dmInput) return;
+        let newCode = dmInput.value.trim().toLowerCase();
+        if (!newCode) { alert("Bitte einen gültigen Raum-Namen eingeben!"); return; }
         
-        .spell-notes-container {
-            margin-top: 6px;
-            padding-top: 6px;
-            border-top: 1px dashed var(--border-color);
-        }
-        .spell-notes-container textarea {
-            font-size: 0.75rem;
-            padding: 6px;
-            resize: vertical;
-            height: 45px;
-            text-align: left;
-        }
-
-        .badge-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
-        .badge-btn {
-            background: #11151d;
-            border: 1px solid var(--border-color);
-            color: var(--text-muted);
-            padding: 6px 2px;
-            border-radius: 6px;
-            font-size: 0.7rem;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .badge-btn.active {
-            border-color: var(--pos-color);
-            color: var(--pos-color);
-            background: #16241b;
-        }
-
-        .party-card {
-            background: #11151d;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 10px;
-            margin-bottom: 8px;
-        }
-        .party-card-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 6px;
-        }
-        .party-info h3 { margin: 0 0 2px 0; font-size: 0.95rem; color: var(--accent); }
-        .party-info p { margin: 0; font-size: 0.75rem; color: var(--text-muted); }
-        .party-stats { display: flex; gap: 8px; text-align: center; }
-        .party-stat-box { background: #161a22; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--border-color); }
-        .party-stat-box label { font-size: 0.6rem; margin: 0; }
-        .party-stat-box span { font-size: 0.85rem; font-weight: bold; }
-
-        .dm-status-badges {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-            margin-top: 6px;
-            padding-top: 6px;
-            border-top: 1px solid #202632;
-        }
-        .dm-badge {
-            font-size: 0.7rem;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-        .badge-rage { background: #422026; color: #fc8181; border: 1px solid #e53e3e; }
-        .badge-conc { background: #232136; color: #d8b4fe; border: 1px solid #a855f7; }
-        .badge-transform { background: #1a3826; color: #6ee7b7; border: 1px solid #48bb78; }
-        .badge-star { background: #3b2f15; color: #f6e05e; border: 1px solid #d69e2e; }
-        .badge-cond { background: #381a1a; color: #f87171; border: 1px solid #ef4444; }
-
-        .dm-note-box {
-            margin-top: 8px;
-            background: #0d0f12;
-            padding: 6px;
-            border-radius: 6px;
-            border: 1px dashed var(--border-color);
-        }
-
-        .btn-add {
-            width: 100%;
-            padding: 8px;
-            background-color: #11151d;
-            border: 1px dashed var(--border-color);
-            color: var(--accent);
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            font-weight: bold;
-            margin-top: 6px;
-        }
-        .btn-remove {
-            background-color: #1e1518;
-            border: 1px solid #422026;
-            color: var(--neg-color);
-            border-radius: 6px;
-            height: 28px;
-            cursor: pointer;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .version-badge {
-            position: fixed;
-            bottom: 12px;
-            right: 12px;
-            background-color: #11151d;
-            border: 1px solid var(--border-color);
-            color: var(--text-muted);
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            z-index: 100;
-            transition: all 0.2s;
-        }
-        .version-badge:hover {
-            color: var(--accent);
-            border-color: var(--accent);
-            transform: translateY(-2px);
-        }
-
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.75);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 200;
-            padding: 16px;
-            box-sizing: border-box;
-        }
-        .modal-content {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            width: 100%;
-            max-width: 500px;
-            max-height: 80vh;
-            overflow-y: auto;
-            padding: 16px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.6);
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 8px;
-            margin-bottom: 12px;
-        }
-        .modal-header h2 { margin: 0; font-size: 1.1rem; color: var(--accent); }
-        .modal-close {
-            background: transparent;
-            border: none;
-            color: var(--text-muted);
-            font-size: 1.2rem;
-            cursor: pointer;
-        }
-        .changelog-item { margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #202632; }
-        .changelog-item h4 { margin: 0 0 4px 0; color: var(--pos-color); font-size: 0.85rem; }
-        .changelog-item ul { margin: 0; padding-left: 18px; font-size: 0.8rem; color: var(--text-muted); }
-        .changelog-item li { margin-bottom: 3px; }
-
-        .hidden { display: none !important; }
-    </style>
-</head>
-<body>
-
-    <div id="login-overlay" class="overlay-screen">
-        <div class="box-card">
-            <h2>D&D Login</h2>
-            <label class="field-left" style="margin-bottom:2px;">Benutzername</label>
-            <input type="text" id="login-user" value="test1" placeholder="admin, test1, test2, test3, test4">
-            
-            <label class="field-left" style="margin-bottom:2px;">Passwort</label>
-            <input type="password" id="login-pass" value="0000" placeholder="0000">
-            
-            <button type="button" class="btn-main" onclick="processLogin()">Anmelden</button>
-            <div id="login-error" class="error-msg"></div>
-        </div>
-    </div>
-
-    <!-- ROLLEN-AUSWAHL MIT ERKLÄrenden INFOS -->
-    <div id="role-overlay" class="overlay-screen hidden">
-        <div class="box-card" style="max-width: 360px;">
-            <h2>Rolle wählen</h2>
-            <p style="font-size:0.75rem; color: var(--text-muted); margin-top:4px;">Wie möchtest du dieser Session beitreten?</p>
-            <div class="role-choice-grid">
-                <button type="button" class="role-card-btn" onclick="selectRole('player')">
-                    <span class="role-title">⚔️ Als Spieler einsteigen</span>
-                    <span class="role-desc">Verwalte deinen Helden, setze Zauber ein, tracke HP, Ressourcen und verfolge das Live-Geschehen der Gruppe.</span>
-                </button>
-                <button type="button" class="role-card-btn" style="border-color: var(--blue-color);" onclick="selectRole('dm')">
-                    <span class="role-title" style="color: #93c5fd;">👑 Als Spielleiter (DM) einsteigen</span>
-                    <span class="role-desc">Überwache alle aktiven Helden live im Raum, behalte HP & Zustände im Blick und verteile geheime DM-Notizen.</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <h1>D&D 5e Live Dashboard</h1>
-
-    <div class="mode-nav" id="main-nav" style="display: none;"></div>
-
-    <div id="view-lobby" class="section hidden">
-        <div class="section-title">DM-Lobby & Raum-Beitritt (<span id="user-display-name">Gast</span>)</div>
-        <div class="grid-2" style="gap: 6px; margin-bottom: 12px;">
-            <div class="field-left">
-                <label>Vom DM erhaltener Raum-Code</label>
-                <input type="text" id="join-room-input" value="zarthul-gruppe" placeholder="z.B. dnd-runde">
-            </div>
-            <div style="display: flex; align-items: flex-end;">
-                <button type="button" class="btn-main" style="margin: 0; height: 41px;" onclick="joinRoom()">Raum beitreten</button>
-            </div>
-        </div>
-        <div id="sync-status" style="font-size: 0.8rem; color: var(--pos-color); padding: 8px; text-align: center; background: #11151d; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 12px;">Verbunden mit Lobby</div>
-
-        <div class="section-title">Deine Helden-Charaktere</div>
-        <div id="character-list-container"></div>
-        <button type="button" class="btn-add" style="margin-top: 10px;" onclick="createNewCharacter()">+ Neuen Charakter erstellen</button>
-    </div>
-
-    <div id="view-sheet" class="hidden">
-        <div class="action-btn-grid">
-            <button type="button" class="btn-save-compact" onclick="manualSaveWithFeedback()">💾 Speichern</button>
-            <button type="button" class="btn-rest" onclick="triggerShortRest()">☕ Kurze Rast</button>
-            <button type="button" class="btn-rest" style="border-color: var(--pos-color); color: var(--pos-color);" onclick="triggerLongRest()">🏕️ Lange Rast</button>
-        </div>
-
-        <div class="section">
-            <div class="field-left" style="margin-bottom: 10px;">
-                <label>Name</label>
-                <input type="text" id="char-name" value="Zar´thul Rocgarn" placeholder="Charaktername" oninput="saveData()">
-            </div>
-            <div class="grid-3">
-                <div class="field-left">
-                    <label>Klasse</label>
-                    <select id="char-class" onchange="updateSubclasses(); onClassChange(); saveData();">
-                        <option value="Barbar">Barbar</option>
-                        <option value="Barde">Barde</option>
-                        <option value="Kleriker">Kleriker</option>
-                        <option value="Druide">Druide</option>
-                        <option value="Kämpfer">Kämpfer</option>
-                        <option value="Mönch">Mönch</option>
-                        <option value="Paladin">Paladin</option>
-                        <option value="Waldläufer">Waldläufer</option>
-                        <option value="Schurke">Schurke</option>
-                        <option value="Hexenmeister">Hexenmeister</option>
-                        <option value="Zauberer">Zauberer</option>
-                        <option value="Magier">Magier</option>
-                    </select>
-                </div>
-                <div class="field-left">
-                    <label>Subklasse / Pfad</label>
-                    <select id="char-subclass" onchange="onSubclassChange(); saveData();">
-                    </select>
-                </div>
-                <div class="field-left">
-                    <label>Stufe</label>
-                    <input type="number" id="char-level" value="6" placeholder="Stufe" oninput="updateAllCalculations(); saveData();">
-                </div>
-            </div>
-        </div>
-
-        <div id="class-resource-section" class="section">
-            <div class="section-title" id="class-resource-title">Klassen-Ressourcen (Auto-Skalierung aktiv)</div>
-            
-            <!-- BARBAR & WELTENBAUM PFAD -->
-            <div id="res-barbar" class="hidden">
-                <input type="hidden" id="rage-curr" value="4">
-                <input type="hidden" id="rage-max" value="4">
-                <button type="button" class="btn-action-toggle" id="btn-toggle-rage" onclick="toggleRageState()">🔥 Wut (4/4)</button>
-
-                <div id="subres-worldtree" class="hidden" style="margin-top: 8px; background: #11151d; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);">
-                    <div class="section-title" style="font-size:0.75rem; color: var(--pos-color);">🌳 Weltenbaum-Pfad: Vitalität des Baums</div>
-                    <div style="display:flex; gap:6px; align-items:center;">
-                        <input type="text" id="worldtree-target" placeholder="Empfänger (z.B. Ich oder Name)" value="Ich" oninput="saveData()" style="font-size:0.8rem; text-align:left;">
-                        <button type="button" class="btn-action-click" onclick="useWorldTreeVigor()" style="margin: 0; background: #16241b; white-space:nowrap;">🌳 Temp-HP geben</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- MÖNCH -->
-            <div id="res-moench" class="hidden">
-                <input type="hidden" id="ki-curr" value="6">
-                <input type="hidden" id="ki-max" value="6">
-                <button type="button" class="btn-action-click" id="btn-ki-use" onclick="useKiPoint()" style="margin-bottom:6px;">⚡ Ki-Punkt einsetzen (<span id="ki-display">6/6</span>)</button>
-                <div class="grid-3">
-                    <button type="button" class="btn-rest" onclick="useKiAction('Flurry of Blows')">🥊 Flurry</button>
-                    <button type="button" class="btn-rest" onclick="useKiAction('Patient Defense')">🛡️ Ausweichen</button>
-                    <button type="button" class="btn-rest" onclick="useKiAction('Step of the Wind')">🏃 Spurt</button>
-                </div>
-            </div>
-
-            <!-- KÄMPFER -->
-            <div id="res-kaempfer" class="hidden">
-                <input type="hidden" id="surge-curr" value="1">
-                <input type="hidden" id="surge-max" value="1">
-                <input type="hidden" id="wind-curr" value="1">
-                <input type="hidden" id="wind-max" value="1">
-                <button type="button" class="btn-action-click" id="btn-surge-use" onclick="useActionSurge()" style="margin-bottom: 6px;">⚔️ Aktionsschub einsetzen (<span id="surge-display">1/1</span>)</button>
-                <button type="button" class="btn-action-click" id="btn-wind-use" onclick="useSecondWind()" style="background: #11151d; border-color: var(--border-color); color: var(--accent);">🛡️ Durchschnaufen einsetzen (<span id="wind-display">1/1</span>)</button>
-            </div>
-            <div id="subres-battlemaster" class="grid-2 hidden" style="margin-top: 8px;">
-                <div class="stat-box"><label>Überlegenheitswürfel</label><input type="number" id="bm-dice-curr" value="4" oninput="saveData()"></div>
-                <div class="stat-box"><label>Würfel-Typ</label><div class="calc-display" style="font-size:1.1rem; margin-top:2px;">d8</div></div>
-            </div>
-
-            <!-- SCHURKE -->
-            <div id="res-schurke" class="grid-2 hidden">
-                <div class="stat-box"><label>Sneak Attack (Auto)</label><div class="calc-display" id="sneak-atk-dice" style="font-size: 1.1rem; margin-top: 4px; color: var(--pos-color);">3W6</div></div>
-                <div class="stat-box"><label>Cunning Action</label><div style="font-size: 0.8rem; color: var(--pos-color); margin-top: 6px; font-weight: bold;">Aktiv</div></div>
-            </div>
-
-            <!-- DRUIDE -->
-            <div id="res-druide" class="hidden">
-                <input type="hidden" id="wildform-curr" value="2">
-                <input type="hidden" id="wildform-max" value="2">
-                <button type="button" class="btn-action-click" id="btn-wildform-use" onclick="useWildform()" style="margin-bottom: 8px;">🐾 Wildform-Einsatz (<span id="wildform-display">2/2</span>)</button>
-
-                <div id="subres-moon" class="hidden" style="margin-top: 6px; background: #11151d; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);">
-                    <div class="section-title" style="font-size:0.75rem; color: var(--pos-color);">🌙 Mond-Zirkel: Wildform-Kampfwerte</div>
-                    <div class="grid-3">
-                        <div class="field-left"><label>Tierform Name</label><input type="text" id="moon-beast-name" placeholder="z.B. Braunbär" oninput="saveData()"></div>
-                        <div class="stat-box"><label>Tier HP / Temp HP</label><input type="number" id="moon-beast-hp" placeholder="34" oninput="saveData()"></div>
-                        <div class="stat-box"><label>Tier Rüstung (AC)</label><input type="number" id="moon-beast-ac" placeholder="11" oninput="saveData()"></div>
-                    </div>
-                </div>
-
-                <div id="subres-stars" class="hidden" style="margin-top: 6px; background: #11151d; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color);">
-                    <div class="section-title" style="font-size:0.75rem; color: var(--pos-color);">⭐ Sterne-Zirkel: Aktive Sternenform</div>
-                    <div class="badge-grid">
-                        <button type="button" class="badge-btn" id="star-form-1" onclick="setStarForm('Meckler')">🏹 Meckler (Angriff)</button>
-                        <button type="button" class="badge-btn" id="star-form-2" onclick="setStarForm('Kelch')">🍷 Kelch (Heilung)</button>
-                        <button type="button" class="badge-btn" id="star-form-3" onclick="setStarForm('Drache')">🐉 Drache (Konz.)</button>
-                    </div>
-                    <input type="hidden" id="active-star-form" value="">
-                </div>
-            </div>
-        </div>
-
-        <div id="spell-section" class="section hidden">
-            <div class="section-title">Zauberei & Zauberbuch</div>
-            <div class="grid-3" style="margin-bottom: 8px;">
-                <div class="field-left">
-                    <label>Zauber-Attribut</label>
-                    <select id="spell-attr" onchange="updateAllCalculations(); saveData();">
-                        <option value="int">Intelligenz (INT)</option>
-                        <option value="wis">Weisheit (WIS)</option>
-                        <option value="cha">Charisma (CHA)</option>
-                    </select>
-                </div>
-                <div class="stat-box"><label>Zauber-DC</label><div class="calc-display" id="spell-dc-display" style="font-size: 1.1rem; margin-top:2px;">13</div></div>
-                <div class="stat-box"><label>Zauber-Angriff</label><div class="calc-display" id="spell-atk-display" style="font-size: 1.1rem; margin-top:2px;">+5</div></div>
-            </div>
-            
-            <div id="pact-magic-info" class="hidden" style="background: #11151d; padding: 6px; border-radius: 6px; margin-bottom: 8px; font-size: 0.75rem; color: var(--accent); text-align: center;">
-                ⚡ <b>Hexenmeister Paktmagie:</b> Slots laden bei kurzer Rast auf!
-            </div>
-
-            <div class="section-title" style="margin-top: 10px; font-size: 0.75rem;">Zauberplätze (Verbraucht / Max)</div>
-            <div class="slot-grid">
-                <div class="slot-box"><label id="lbl-slot-1">1. Grad</label><div class="slot-inputs"><input type="number" id="slot-1-c" placeholder="0" oninput="saveData()"><input type="number" id="slot-1-m" placeholder="4" oninput="saveData()"></div></div>
-                <div class="slot-box" id="box-slot-2"><label>2. Grad</label><div class="slot-inputs"><input type="number" id="slot-2-c" placeholder="0" oninput="saveData()"><input type="number" id="slot-2-m" placeholder="3" oninput="saveData()"></div></div>
-                <div class="slot-box" id="box-slot-3"><label>3. Grad</label><div class="slot-inputs"><input type="number" id="slot-3-c" placeholder="0" oninput="saveData()"><input type="number" id="slot-3-m" placeholder="3" oninput="saveData()"></div></div>
-                <div class="slot-box" id="box-slot-4"><label>4. Grad</label><div class="slot-inputs"><input type="number" id="slot-4-c" placeholder="0" oninput="saveData()"><input type="number" id="slot-4-m" placeholder="0" oninput="saveData()"></div></div>
-                <div class="slot-box" id="box-slot-5"><label>5. Grad</label><div class="slot-inputs"><input type="number" id="slot-5-c" placeholder="0" oninput="saveData()"><input type="number" id="slot-5-m" placeholder="0" oninput="saveData()"></div></div>
-                <div class="slot-box" id="box-slot-6"><label>6. Grad</label><div class="slot-inputs"><input type="number" id="slot-6-c" placeholder="0" oninput="saveData()"><input type="number" id="slot-6-m" placeholder="0" oninput="saveData()"></div></div>
-            </div>
-
-            <div class="section-title" style="margin-top: 14px; font-size: 0.75rem;">Vorbereitete Zauber & Cantrips</div>
-            <div class="spell-header">
-                <span>Vorb.</span><span style="text-align:left;">Zauber Name</span><span>Grad</span><span>Zeit</span><span>Konz.</span><span>Notiz</span><span></span>
-            </div>
-            <div id="spells-list"></div>
-            <button type="button" class="btn-add" onclick="addSpell(); saveData();">+ Zauber hinzufügen</button>
-        </div>
-
-        <div class="section">
-            <div class="section-title">Kampfwerte & Zustände</div>
-            <div class="grid-4">
-                <div class="stat-box"><label>Aktuelle HP</label><input type="number" id="hp-curr" value="59" oninput="saveData()"></div>
-                <div class="stat-box"><label>Max HP</label><input type="number" id="hp-max" value="59" oninput="saveData()"></div>
-                <div class="stat-box"><label>Temp HP</label><input type="number" id="hp-temp" placeholder="0" oninput="saveData()"></div>
-                <div class="stat-box"><label>Rüstung (AC)</label><input type="number" id="ac" value="15" oninput="saveData()"></div>
-            </div>
-            
-            <div class="grid-2" style="margin-top: 8px;">
-                <div class="stat-box"><label>Übungsbonus</label><input type="number" id="pb" value="3" oninput="updateAllCalculations(); saveData();"><div class="mod-display" id="pb-display" style="color: #48bb78;">+3</div></div>
-                <div class="stat-box"><label>Initiative</label><input type="number" id="init" value="2" placeholder="+2" oninput="saveData()"></div>
-            </div>
-
-            <div style="margin-top: 10px; background: #11151d; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between;">
-                <div style="font-size: 0.8rem; color: var(--accent);">🛡️ Ungerüstete Rüstungsklasse (Auto AC)</div>
-                <input type="checkbox" id="auto-ac-toggle" onchange="updateAllCalculations(); saveData();" style="width: 18px; height: 18px; accent-color: var(--pos-color); cursor: pointer;">
-            </div>
-
-            <div style="margin-top: 10px;">
-                <label style="text-align: left; margin-bottom: 4px;">Aktive Zustände (Sichtbar für DM)</label>
-                <div class="status-toggle-grid">
-                    <button type="button" class="status-chip" id="cond-poisoned" onclick="toggleCondition('poisoned')">☣️ Vergiftet</button>
-                    <button type="button" class="status-chip" id="cond-stunned" onclick="toggleCondition('stunned')">💫 Betäubt</button>
-                    <button type="button" class="status-chip" id="cond-prone" onclick="toggleCondition('prone')">🛌 Liegend</button>
-                    <button type="button" class="status-chip" id="cond-paralyzed" onclick="toggleCondition('paralyzed')">⚡ Gelähmt</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="section">
-            <div class="section-title">Attribute & Fertigkeiten</div>
-            <div class="attr-grid">
-                <div class="attr-group">
-                    <div>
-                        <div class="attr-header"><span class="attr-title">Stärke (STR)</span><div class="attr-inputs"><input type="number" id="str" value="16" oninput="updateAllCalculations(); saveData();"><div class="mod-display" id="str-mod">+3</div></div></div>
-                        <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="save-str" checked onchange="updateAllCalculations(); saveData();"><span>Rettungswurf</span></div><strong id="val-save-str">+6</strong></div>
-                        <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-athletik" checked onchange="updateAllCalculations(); saveData();"><span>Athletik</span></div><strong id="val-skill-athletik">+6</strong></div>
-                    </div>
-                </div>
-                <div class="attr-group">
-                    <div>
-                        <div class="attr-header"><span class="attr-title">Geschick (DEX)</span><div class="attr-inputs"><input type="number" id="dex" value="14" oninput="updateAllCalculations(); saveData();"><div class="mod-display" id="dex-mod">+2</div></div></div>
-                        <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="save-dex" onchange="updateAllCalculations(); saveData();"><span>Rettungswurf</span></div><strong id="val-save-dex">+2</strong></div>
-                        <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-akrobatik" onchange="updateAllCalculations(); saveData();"><span>Akrobatik</span></div><strong id="val-skill-akrobatik">+2</strong></div>
-                        <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-fingerfertigkeit" onchange="updateAllCalculations(); saveData();"><span>Fingerfertigkeit</span></div><strong id="val-skill-fingerfertigkeit">+2</strong></div>
-                        <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-heimlichkeit" onchange="updateAllCalculations(); saveData();"><span>Heimlichkeit</span></div><strong id="val-skill-heimlichkeit">+2</strong></div>
-                    </div>
-                </div>
-                <div class="attr-group">
-                    <div>
-                        <div class="attr-header"><span class="attr-title">Konstitution (CON)</span><div class="attr-inputs"><input type="number" id="con" value="16" oninput="updateAllCalculations(); saveData();"><div class="mod-display" id="con-mod">+3</div></div></div>
-                        <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="save-con" checked onchange="updateAllCalculations(); saveData();"><span>Rettungswurf</span></div><strong id="val-save-con">+6</strong></div>
-                    </div>
-                </div>
-                <div class="attr-group">
-                    <div>
-                        <div class="attr-header"><span class="attr-title">Intelligenz (INT)</span><div class="attr-inputs"><input type="number" id="int" value="8" oninput="updateAllCalculations(); saveData();"><div class="mod-display" id="int-mod">-1</div></div></div>
-                        <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="save-int" onchange="updateAllCalculations(); saveData();"><span>Rettungswurf</span></div><strong id="val-save-int">-1</strong></div>
-                        <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-arkanekunde" onchange="updateAllCalculations(); saveData();"><span>Arkane Kunde</span></div><strong id="val-skill-arkanekunde">-1</strong></div>
-                        <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-geschichte" onchange="updateAllCalculations(); saveData();"><span>Geschichte</span></div><strong id="val-skill-geschichte">-1</strong></div>
-                    </div>
-                </div>
-                <div class="attr-group">
-                    <div>
-                        <div class="attr-header"><span class="attr-title">Weisheit (WIS)</span><div class="attr-inputs"><input type="number" id="wis" value="10" oninput="updateAllCalculations(); saveData();"><div class="mod-display" id="wis-mod">+0</div></div></div>
-                        <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="save-wis" onchange="updateAllCalculations(); saveData();"><span>Rettungswurf</span></div><strong id="val-save-wis">+0</strong></div>
-                        <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-wahrnehmung" checked onchange="updateAllCalculations(); saveData();"><span>Wahrnehmung</span></div><strong id="val-skill-wahrnehmung">+3</strong></div>
-                    </div>
-                </div>
-                <div class="attr-group">
-                    <div>
-                        <div class="attr-header"><span class="attr-title">Charisma (CHA)</span><div class="attr-inputs"><input type="number" id="cha" value="10" oninput="updateAllCalculations(); saveData();"><div class="mod-display" id="cha-mod">+0</div></div></div>
-                        <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="save-cha" onchange="updateAllCalculations(); saveData();"><span>Rettungswurf</span></div><strong id="val-save-cha">+0</strong></div>
-                        <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-einschuechtern" checked onchange="updateAllCalculations(); saveData();"><span>Einschüchtern</span></div><strong id="val-skill-einschuechtern">+3</strong></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="section">
-            <div class="section-title">Waffen & Angriffe</div>
-            <div class="weapon-header">
-                <span style="text-align:left;">Waffen Name</span><span>Magie</span><span>Schaden</span><span>Bonus</span><span></span>
-            </div>
-            <div id="weapons-list"></div>
-            <button type="button" class="btn-add" onclick="addWeapon(); saveData();">+ Waffe hinzufügen</button>
-        </div>
-
-        <div class="section">
-            <div class="section-title">Reichtum & Münzen</div>
-            <div class="grid-3">
-                <div class="stat-box"><label>Gold (GP)</label><input type="number" id="coin-gp" value="45" oninput="saveData()" style="color:#f6e05e; font-weight:bold;"></div>
-                <div class="stat-box"><label>Silber (SP)</label><input type="number" id="coin-sp" value="12" oninput="saveData()" style="color:#cbd5e1; font-weight:bold;"></div>
-                <div class="stat-box"><label>Kupfer (CP)</label><input type="number" id="coin-cp" value="8" oninput="saveData()" style="color:#dd6b20; font-weight:bold;"></div>
-            </div>
-        </div>
-
-        <div class="section">
-            <div class="section-title">Rucksack & Ausrüstung</div>
-            <textarea id="inventory-notes" placeholder="Seile, Fackeln, Werkzeuge, Quest-Items..." style="height: 70px; font-size: 0.85rem; text-align: left;" oninput="saveData()">Abenteurerausrüstung, Kletterseil (15m), Fackeln (4), Heilerkit.</textarea>
-        </div>
-
-        <div class="section">
-            <div class="section-title">Tränke & Verbrauchsgüter</div>
-            <div id="potions-container"></div>
-            <button type="button" class="btn-add" onclick="addPotionSlot(); saveData();">+ Trank / Item hinzufügen</button>
-        </div>
-    </div>
-
-    <div id="view-party" class="section hidden">
-        <div class="section-title">Party Gruppen-Übersicht</div>
-        <div id="party-list-container">
-            <div style="text-align: center; color: var(--text-muted); padding: 20px;">Lese Gruppendaten...</div>
-        </div>
-    </div>
-
-    <div id="view-dm" class="section hidden">
-        <div class="section-title">Spielleiter (DM) Dashboard - Raumsteuerung</div>
-        <div class="section" style="background: #11151d; margin-bottom: 12px;">
-            <div class="field-left">
-                <label>Aktiver DM Raum-Code für die Gruppe</label>
-                <input type="text" id="dm-room-code-input" value="zarthul-gruppe" oninput="updateDMRoom(this.value)">
-            </div>
-            <div id="dm-debug-box" style="margin-top: 10px; font-size: 0.75rem; color: #facc15; background: #080a0e; padding: 6px; border-radius: 4px; border: 1px dashed #422026;">
-                🔍 Firebase-Status: Lausche auf Raum...
-            </div>
-        </div>
-        <div id="dm-list-container">
-            <div style="text-align: center; color: var(--text-muted); padding: 20px;">Lese Helden-Daten...</div>
-        </div>
-    </div>
-
-    <div class="version-badge" onclick="toggleChangelogModal(true)">
-        v0.4.9 📜
-    </div>
-
-    <div id="changelog-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Changelog & Versionen-Historie</h2>
-                <button type="button" class="modal-close" onclick="toggleChangelogModal(false)">✕</button>
-            </div>
-            
-            <div class="changelog-item">
-                <h4>Version 0.4.9 (Aktuell)</h4>
-                <ul>
-                    <li>⚡ Firebase-Raum-Synchronisation und Initialisierung stabilisiert.</li>
-                </ul>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const firebaseConfig = {
-            databaseURL: "https://dnd-live-dashboard-default-rtdb.europe-west1.firebasedatabase.app/"
-        };
+        activeRoom = newCode;
+        localStorage.setItem('dnd_active_room_' + currentUser, activeRoom);
+        let joinInput = document.getElementById('join-room-input');
+        if (joinInput) joinInput.value = activeRoom;
         
-        let db = null;
-        let isCloudActive = false;
-        let currentActiveCharId = null;
-        let activeRoom = "zarthul-gruppe";
-        let currentUser = null;
-        let currentRole = null;
+        initCloudSync();
+        alert("👑 DM-Raum aktiv gewechselt zu: " + activeRoom);
+    }
 
-        const validAccounts = ["admin", "test1", "test2", "test3", "test4"];
+    // Neu: DM kann einen Charakter / Spieler aus dem Raum kicken
+    function dmKickCharacter(charKey) {
+        if (!confirm("Möchtest du diesen Charakter wirklich aus dem Raum werfen?")) return;
+        if (!isCloudActive || !db) return;
+        
+        db.ref('rooms/' + activeRoom + '/characters/' + charKey).remove().then(() => {
+            alert("Charakter erfolgreich aus dem Raum entfernt.");
+        });
+    }
 
-        const subclassData = {
-            "Barbar": ["Pfad des Weltenbaums", "Pfad des Berserkers", "Pfad des Totemkriegers"],
-            "Barde": ["Kollegium der Lore", "Kollegium der Tapferkeit"],
-            "Kleriker": ["Domäne des Lebens", "Domäne des Lichts", "Domäne des Sturms"],
-            "Druide": ["Zirkel des Mondes", "Zirkel der Sterne", "Zirkel des Landes", "Zirkel des Sporen"],
-            "Kämpfer": ["Meister des Kampfs (Battle Master)", "Champion", "Mystischer Ritter"],
-            "Mönch": ["Weg der Offenen Hand", "Weg des Schattens"],
-            "Paladin": ["Eid der Hingabe", "Eid der Rache"],
-            "Waldläufer": ["Jäger", "Tierherr (Beast Master)"],
-            "Schurke": ["Dieb", "Assassine", "Arcane Trickster"],
-            "Hexenmeister": ["Der Große Alte", "Die Feenwesen-Patronin", "Der Unterweltler"],
-            "Zauberer": ["Drachenblut-Linie", "Wilde Magie"],
-            "Magier": ["Schule der Evokation", "Schule der Abjuration"]
-        };
+    function manualSaveWithFeedback() {
+        saveData();
+        let btn = document.querySelector('.btn-save-compact');
+        if (btn) {
+            let originalText = btn.innerText;
+            btn.innerText = "✅ Gespeichert!";
+            setTimeout(() => { btn.innerText = originalText; }, 1500);
+        }
+    }
 
-        function processLogin() {
-            let u = document.getElementById('login-user').value.trim().toLowerCase();
-            let p = document.getElementById('login-pass').value.trim();
-            let err = document.getElementById('login-error');
+    function toggleCondition(condName) {
+        let btn = document.getElementById('cond-' + condName);
+        if (btn) btn.classList.toggle('active');
+        saveData();
+    }
 
-            if (validAccounts.includes(u) && p === "0000") {
-                currentUser = u;
-                localStorage.setItem('dnd_logged_user', u);
-                document.getElementById('login-overlay').classList.add('hidden');
-                document.getElementById('role-overlay').classList.remove('hidden');
-            } else {
-                err.innerText = "Ungültiger Benutzername oder Passwort!";
+    function saveDMSecetNote(charKey, noteText) {
+        if (!isCloudActive || !db) return;
+        db.ref('rooms/' + activeRoom + '/characters/' + charKey + '/dmNote').set(noteText);
+    }
+
+    function updateRageButtonText() {
+        let curr = parseInt(document.getElementById('rage-curr').value) || 0;
+        let max = parseInt(document.getElementById('rage-max').value) || 4;
+        let btnToggle = document.getElementById('btn-toggle-rage');
+        if (!btnToggle) return;
+        let isActive = btnToggle.classList.contains('active');
+        btnToggle.innerText = isActive ? `🔥 Wut beenden (${curr}/${max} übrig)` : `🔥 Wut (${curr}/${max})`;
+    }
+
+    function toggleRageState() {
+        let btnToggle = document.getElementById('btn-toggle-rage');
+        let currInput = document.getElementById('rage-curr');
+        if (!btnToggle || !currInput) return;
+        let max = parseInt(document.getElementById('rage-max').value) || 4;
+        let curr = parseInt(currInput.value) || 0;
+        let isActive = btnToggle.classList.contains('active');
+
+        if (!isActive) {
+            if (curr <= 0) { alert("Du hast keine Wut-Einsätze mehr übrig!"); return; }
+            currInput.value = curr - 1;
+            btnToggle.classList.add('active');
+        } else {
+            btnToggle.classList.remove('active');
+        }
+        updateRageButtonText();
+        saveData();
+    }
+
+    function useWorldTreeVigor() {
+        let lvl = parseInt(document.getElementById('char-level').value) || 1;
+        let conMod = getMod(parseInt(document.getElementById('con').value));
+        let tempHpVal = conMod + lvl;
+        let targetEl = document.getElementById('worldtree-target');
+        let target = targetEl ? targetEl.value.trim() : 'Ich';
+
+        let tempHpInput = document.getElementById('hp-temp');
+        let currentTemp = tempHpInput ? (parseInt(tempHpInput.value) || 0) : 0;
+        if (tempHpInput) tempHpInput.value = Math.max(currentTemp, tempHpVal);
+        saveData();
+        alert(`🌳 Vitalität des Weltenbaums aktiv! ${target} erhält ${tempHpVal} temporäre Trefferpunkte.`);
+    }
+
+    function updateKiDisplay() {
+        let curr = parseInt(document.getElementById('ki-curr').value) || 0;
+        let max = parseInt(document.getElementById('ki-max').value) || 6;
+        let disp = document.getElementById('ki-display');
+        if (disp) disp.innerText = `${curr}/${max}`;
+    }
+
+    function useKiPoint() {
+        let currInput = document.getElementById('ki-curr');
+        if (!currInput) return;
+        let curr = parseInt(currInput.value) || 0;
+        if (curr <= 0) { alert("Keine Ki-Punkte mehr übrig!"); return; }
+        currInput.value = curr - 1;
+        updateKiDisplay();
+        saveData();
+    }
+
+    function useKiAction(actionName) {
+        let currInput = document.getElementById('ki-curr');
+        if (!currInput) return;
+        let curr = parseInt(currInput.value) || 0;
+        if (curr <= 0) { alert(`Keine Ki-Punkte mehr für ${actionName} übrig!`); return; }
+        currInput.value = curr - 1;
+        updateKiDisplay();
+        saveData();
+        alert(`⚡ Ki-Punkt eingesetzt für ${actionName}!`);
+    }
+
+    function updateActionSurgeDisplay() {
+        let curr = parseInt(document.getElementById('surge-curr').value) || 0;
+        let max = parseInt(document.getElementById('surge-max').value) || 1;
+        let disp = document.getElementById('surge-display');
+        if (disp) disp.innerText = `${curr}/${max}`;
+    }
+
+    function useActionSurge() {
+        let currInput = document.getElementById('surge-curr');
+        if (!currInput) return;
+        let curr = parseInt(currInput.value) || 0;
+        if (curr <= 0) { alert("Aktionsschub bereits verbraucht!"); return; }
+        currInput.value = curr - 1;
+        updateActionSurgeDisplay();
+        saveData();
+    }
+
+    function updateSecondWindDisplay() {
+        let curr = parseInt(document.getElementById('wind-curr').value) || 0;
+        let max = parseInt(document.getElementById('wind-max').value) || 1;
+        let disp = document.getElementById('wind-display');
+        if (disp) disp.innerText = `${curr}/${max}`;
+    }
+
+    function useSecondWind() {
+        let currInput = document.getElementById('wind-curr');
+        if (!currInput) return;
+        let curr = parseInt(currInput.value) || 0;
+        if (curr <= 0) { alert("Durchschnaufen bereits verbraucht!"); return; }
+        currInput.value = curr - 1;
+        updateSecondWindDisplay();
+        saveData();
+    }
+
+    function updateWildformDisplay() {
+        let curr = parseInt(document.getElementById('wildform-curr').value) || 0;
+        let max = parseInt(document.getElementById('wildform-max').value) || 2;
+        let disp = document.getElementById('wildform-display');
+        if (disp) disp.innerText = `${curr}/${max}`;
+    }
+
+    function useWildform() {
+        let currInput = document.getElementById('wildform-curr');
+        if (!currInput) return;
+        let curr = parseInt(currInput.value) || 0;
+        if (curr <= 0) { alert("Keine Wildform-Einsätze mehr übrig!"); return; }
+        currInput.value = curr - 1;
+        updateWildformDisplay();
+        saveData();
+    }
+
+    function triggerLongRest() {
+        if (confirm("Lange Rast durchführen? (Regeneriert HP, Zauberplätze & alle Klassenressourcen)")) {
+            let maxHpEl = document.getElementById('hp-max');
+            let maxHp = maxHpEl ? maxHpEl.value : '0';
+            let hpCurr = document.getElementById('hp-curr');
+            let hpTemp = document.getElementById('hp-temp');
+            if (hpCurr) hpCurr.value = maxHp;
+            if (hpTemp) hpTemp.value = 0;
+
+            for (let i = 1; i <= 6; i++) {
+                let slotC = document.getElementById(`slot-${i}-c`);
+                if (slotC) slotC.value = 0;
             }
-        }
 
-        function selectRole(role) {
-            currentRole = role;
-            localStorage.setItem('dnd_logged_role', role);
-            document.getElementById('role-overlay').classList.add('hidden');
-            setupNavigation();
-            let userDisp = document.getElementById('user-display-name');
-            if (userDisp) userDisp.innerText = currentUser.toUpperCase() + (role === 'dm' ? ' (DM)' : '');
-            initApp();
-        }
-
-        function setupNavigation() {
-            let nav = document.getElementById('main-nav');
-            if (!nav) return;
-            if (currentRole === 'dm') {
-                nav.style.gridTemplateColumns = 'repeat(2, 1fr)';
-                nav.innerHTML = `
-                    <button type="button" class="mode-btn active" id="btn-mode-dm" onclick="switchMode('dm')">DM Ansicht</button>
-                    <button type="button" class="mode-btn btn-logout-nav" onclick="logout()">Abmelden 🚪</button>
-                `;
-            } else {
-                nav.style.gridTemplateColumns = 'repeat(4, 1fr)';
-                nav.innerHTML = `
-                    <button type="button" class="mode-btn active" id="btn-mode-lobby" onclick="switchMode('lobby')">Lobby</button>
-                    <button type="button" class="mode-btn" id="btn-mode-sheet" onclick="switchMode('sheet')">Charakter</button>
-                    <button type="button" class="mode-btn" id="btn-mode-party" onclick="switchMode('party')">Party Live</button>
-                    <button type="button" class="mode-btn btn-logout-nav" onclick="logout()">Abmelden 🚪</button>
-                `;
-            }
-            nav.style.display = 'grid';
-        }
-
-        function logout() {
-            localStorage.removeItem('dnd_logged_user');
-            localStorage.removeItem('dnd_logged_role');
-            location.reload();
-        }
-
-        function toggleChangelogModal(show) {
-            let modal = document.getElementById('changelog-modal');
-            if (modal) modal.classList.toggle('hidden', !show);
-        }
-
-        function joinRoom() {
-            let codeInput = document.getElementById('join-room-input');
-            if (!codeInput) return;
-            let code = codeInput.value.trim();
-            if (!code) { alert("Bitte gib einen gültigen Raum-Code ein!"); return; }
-            activeRoom = code;
-            localStorage.setItem('dnd_active_room_' + currentUser, code);
-            initCloudSync();
-            saveData();
-            renderCharacterList();
-            alert("Erfolgreich dem Raum '" + code + "' beigetreten!");
-        }
-
-        function updateDMRoom(newCode) {
-            if (!newCode.trim()) return;
-            activeRoom = newCode.trim();
-            localStorage.setItem('dnd_active_room_' + currentUser, activeRoom);
-            let joinInput = document.getElementById('join-room-input');
-            if (joinInput) joinInput.value = activeRoom;
-            initCloudSync();
-        }
-
-        function manualSaveWithFeedback() {
-            saveData();
-            let btn = document.querySelector('.btn-save-compact');
-            if (btn) {
-                let originalText = btn.innerText;
-                btn.innerText = "✅ Gespeichert!";
-                setTimeout(() => { btn.innerText = originalText; }, 1500);
-            }
-        }
-
-        function toggleCondition(condName) {
-            let btn = document.getElementById('cond-' + condName);
-            if (btn) btn.classList.toggle('active');
-            saveData();
-        }
-
-        function saveDMSecetNote(charKey, noteText) {
-            if (!isCloudActive || !db) return;
-            db.ref('rooms/' + activeRoom + '/characters/' + charKey + '/dmNote').set(noteText);
-        }
-
-        function updateRageButtonText() {
-            let curr = parseInt(document.getElementById('rage-curr').value) || 0;
-            let max = parseInt(document.getElementById('rage-max').value) || 4;
+            let rageCurr = document.getElementById('rage-curr');
+            let rageMax = document.getElementById('rage-max');
+            if (rageCurr && rageMax) rageCurr.value = rageMax.value;
             let btnToggle = document.getElementById('btn-toggle-rage');
-            if (!btnToggle) return;
-            let isActive = btnToggle.classList.contains('active');
-            btnToggle.innerText = isActive ? `🔥 Wut beenden (${curr}/${max} übrig)` : `🔥 Wut (${curr}/${max})`;
-        }
-
-        function toggleRageState() {
-            let btnToggle = document.getElementById('btn-toggle-rage');
-            let currInput = document.getElementById('rage-curr');
-            if (!btnToggle || !currInput) return;
-            let max = parseInt(document.getElementById('rage-max').value) || 4;
-            let curr = parseInt(currInput.value) || 0;
-            let isActive = btnToggle.classList.contains('active');
-
-            if (!isActive) {
-                if (curr <= 0) { alert("Du hast keine Wut-Einsätze mehr übrig!"); return; }
-                currInput.value = curr - 1;
-                btnToggle.classList.add('active');
-            } else {
-                btnToggle.classList.remove('active');
-            }
+            if (btnToggle) btnToggle.classList.remove('active');
             updateRageButtonText();
-            saveData();
-        }
 
-        function useWorldTreeVigor() {
-            let lvl = parseInt(document.getElementById('char-level').value) || 1;
-            let conMod = getMod(parseInt(document.getElementById('con').value));
-            let tempHpVal = conMod + lvl;
-            let targetEl = document.getElementById('worldtree-target');
-            let target = targetEl ? targetEl.value.trim() : 'Ich';
-
-            let tempHpInput = document.getElementById('hp-temp');
-            let currentTemp = tempHpInput ? (parseInt(tempHpInput.value) || 0) : 0;
-            if (tempHpInput) tempHpInput.value = Math.max(currentTemp, tempHpVal);
-            saveData();
-            alert(`🌳 Vitalität des Weltenbaums aktiv! ${target} erhält ${tempHpVal} temporäre Trefferpunkte.`);
-        }
-
-        function updateKiDisplay() {
-            let curr = parseInt(document.getElementById('ki-curr').value) || 0;
-            let max = parseInt(document.getElementById('ki-max').value) || 6;
-            let disp = document.getElementById('ki-display');
-            if (disp) disp.innerText = `${curr}/${max}`;
-        }
-
-        function useKiPoint() {
-            let currInput = document.getElementById('ki-curr');
-            if (!currInput) return;
-            let curr = parseInt(currInput.value) || 0;
-            if (curr <= 0) { alert("Keine Ki-Punkte mehr übrig!"); return; }
-            currInput.value = curr - 1;
-            updateKiDisplay();
-            saveData();
-        }
-
-        function useKiAction(actionName) {
-            let currInput = document.getElementById('ki-curr');
-            if (!currInput) return;
-            let curr = parseInt(currInput.value) || 0;
-            if (curr <= 0) { alert(`Keine Ki-Punkte mehr für ${actionName} übrig!`); return; }
-            currInput.value = curr - 1;
-            updateKiDisplay();
-            saveData();
-            alert(`⚡ Ki-Punkt eingesetzt für ${actionName}!`);
-        }
-
-        function updateActionSurgeDisplay() {
-            let curr = parseInt(document.getElementById('surge-curr').value) || 0;
-            let max = parseInt(document.getElementById('surge-max').value) || 1;
-            let disp = document.getElementById('surge-display');
-            if (disp) disp.innerText = `${curr}/${max}`;
-        }
-
-        function useActionSurge() {
-            let currInput = document.getElementById('surge-curr');
-            if (!currInput) return;
-            let curr = parseInt(currInput.value) || 0;
-            if (curr <= 0) { alert("Aktionsschub bereits verbraucht!"); return; }
-            currInput.value = curr - 1;
-            updateActionSurgeDisplay();
-            saveData();
-        }
-
-        function updateSecondWindDisplay() {
-            let curr = parseInt(document.getElementById('wind-curr').value) || 0;
-            let max = parseInt(document.getElementById('wind-max').value) || 1;
-            let disp = document.getElementById('wind-display');
-            if (disp) disp.innerText = `${curr}/${max}`;
-        }
-
-        function useSecondWind() {
-            let currInput = document.getElementById('wind-curr');
-            if (!currInput) return;
-            let curr = parseInt(currInput.value) || 0;
-            if (curr <= 0) { alert("Durchschnaufen bereits verbraucht!"); return; }
-            currInput.value = curr - 1;
-            updateSecondWindDisplay();
-            saveData();
-        }
-
-        function updateWildformDisplay() {
-            let curr = parseInt(document.getElementById('wildform-curr').value) || 0;
-            let max = parseInt(document.getElementById('wildform-max').value) || 2;
-            let disp = document.getElementById('wildform-display');
-            if (disp) disp.innerText = `${curr}/${max}`;
-        }
-
-        function useWildform() {
-            let currInput = document.getElementById('wildform-curr');
-            if (!currInput) return;
-            let curr = parseInt(currInput.value) || 0;
-            if (curr <= 0) { alert("Keine Wildform-Einsätze mehr übrig!"); return; }
-            currInput.value = curr - 1;
-            updateWildformDisplay();
-            saveData();
-        }
-
-        function triggerLongRest() {
-            if (confirm("Lange Rast durchführen? (Regeneriert HP, Zauberplätze & alle Klassenressourcen)")) {
-                let maxHpEl = document.getElementById('hp-max');
-                let maxHp = maxHpEl ? maxHpEl.value : '0';
-                let hpCurr = document.getElementById('hp-curr');
-                let hpTemp = document.getElementById('hp-temp');
-                if (hpCurr) hpCurr.value = maxHp;
-                if (hpTemp) hpTemp.value = 0;
-
-                for (let i = 1; i <= 6; i++) {
-                    let slotC = document.getElementById(`slot-${i}-c`);
-                    if (slotC) slotC.value = 0;
-                }
-
-                let rageCurr = document.getElementById('rage-curr');
-                let rageMax = document.getElementById('rage-max');
-                if (rageCurr && rageMax) rageCurr.value = rageMax.value;
-                let btnToggle = document.getElementById('btn-toggle-rage');
-                if (btnToggle) btnToggle.classList.remove('active');
-                updateRageButtonText();
-
-                let kiCurr = document.getElementById('ki-curr');
-                let kiMax = document.getElementById('ki-max');
-                if (kiCurr && kiMax) kiCurr.value = kiMax.value;
-                updateKiDisplay();
-
-                let surgeCurr = document.getElementById('surge-curr');
-                let surgeMax = document.getElementById('surge-max');
-                if (surgeCurr && surgeMax) surgeCurr.value = surgeMax.value;
-                updateActionSurgeDisplay();
-
-                let windCurr = document.getElementById('wind-curr');
-                let windMax = document.getElementById('wind-max');
-                if (windCurr && windMax) windCurr.value = windMax.value;
-                updateSecondWindDisplay();
-
-                let wildCurr = document.getElementById('wildform-curr');
-                let wildMax = document.getElementById('wildform-max');
-                if (wildCurr && wildMax) wildCurr.value = wildMax.value;
-                updateWildformDisplay();
-
-                saveData();
-                alert("🏕️ Lange Rast abgeschlossen! Alle Ressourcen wieder voll.");
-            }
-        }
-
-        function triggerShortRest() {
-            let cls = document.getElementById('char-class');
-            if (!cls) return;
-            if (cls.value === "Hexenmeister") { let s1 = document.getElementById('slot-1-c'); if (s1) s1.value = 0; }
-            if (cls.value === "Kämpfer") {
-                let sCurr = document.getElementById('surge-curr');
-                let sMax = document.getElementById('surge-max');
-                if (sCurr && sMax) sCurr.value = sMax.value;
-                updateActionSurgeDisplay();
-                let wCurr = document.getElementById('wind-curr');
-                let wMax = document.getElementById('wind-max');
-                if (wCurr && wMax) wCurr.value = wMax.value;
-                updateSecondWindDisplay();
-            }
-            saveData();
-            alert("☕ Kurze Rast abgeschlossen!");
-        }
-
-        function updateSubclasses() {
-            let clsEl = document.getElementById('char-class');
-            let subSelect = document.getElementById('char-subclass');
-            if (!clsEl || !subSelect) return;
-            subSelect.innerHTML = '';
-            
-            let list = subclassData[clsEl.value] || ["Allgemein"];
-            list.forEach(sub => {
-                let opt = document.createElement('option');
-                opt.value = sub;
-                opt.innerText = sub;
-                subSelect.appendChild(opt);
-            });
-            onSubclassChange();
-        }
-
-        function setStarForm(formName) {
-            let formInput = document.getElementById('active-star-form');
-            if (!formInput) return;
-            let current = formInput.value;
-            let next = (current === formName) ? '' : formName;
-            formInput.value = next;
-
-            let f1 = document.getElementById('star-form-1');
-            let f2 = document.getElementById('star-form-2');
-            let f3 = document.getElementById('star-form-3');
-            if (f1) f1.classList.toggle('active', next === 'Meckler');
-            if (f2) f2.classList.toggle('active', next === 'Kelch');
-            if (f3) f3.classList.toggle('active', next === 'Drache');
-            saveData();
-        }
-
-        function onSubclassChange() {
-            let clsEl = document.getElementById('char-class');
-            let subSelect = document.getElementById('char-subclass');
-            if (!clsEl || !subSelect) return;
-            let cls = clsEl.value;
-            let sub = subSelect.value;
-
-            let subresMoon = document.getElementById('subres-moon');
-            let subresStars = document.getElementById('subres-stars');
-            let subresBM = document.getElementById('subres-battlemaster');
-            let subresWorldTree = document.getElementById('subres-worldtree');
-
-            if (subresMoon) subresMoon.classList.add('hidden');
-            if (subresStars) subresStars.classList.add('hidden');
-            if (subresBM) subresBM.classList.add('hidden');
-            if (subresWorldTree) subresWorldTree.classList.add('hidden');
-
-            if (cls === "Druide") {
-                if (sub === "Zirkel des Mondes") subresMoon.classList.remove('hidden');
-                if (sub === "Zirkel der Sterne") subresStars.classList.remove('hidden');
-            } else if (cls === "Kämpfer" && sub.includes("Battle Master")) {
-                if (subresBM) subresBM.classList.remove('hidden');
-            } else if (cls === "Barbar" && sub.includes("Weltenbaum")) {
-                if (subresWorldTree) subresWorldTree.classList.remove('hidden');
-            }
-        }
-
-        function autoScaleResources() {
-            let clsEl = document.getElementById('char-class');
-            let lvlEl = document.getElementById('char-level');
-            if (!clsEl || !lvlEl) return;
-            let cls = clsEl.value;
-            let lvl = parseInt(lvlEl.value) || 1;
-
-            if (cls === "Barbar") {
-                let maxRage = lvl >= 17 ? 6 : (lvl >= 12 ? 5 : (lvl >= 6 ? 4 : (lvl >= 3 ? 3 : 2)));
-                let rMax = document.getElementById('rage-max');
-                if (rMax) rMax.value = maxRage;
-                let rCurr = document.getElementById('rage-curr');
-                if (rCurr && (isNaN(parseInt(rCurr.value)) || parseInt(rCurr.value) > maxRage)) rCurr.value = maxRage;
-                updateRageButtonText();
-            } else if (cls === "Mönch") {
-                let kiMax = lvl;
-                let kMax = document.getElementById('ki-max');
-                if (kMax) kMax.value = kiMax;
-                let kCurr = document.getElementById('ki-curr');
-                if (kCurr && (isNaN(parseInt(kCurr.value)) || parseInt(kCurr.value) > kiMax)) kCurr.value = kiMax;
-                updateKiDisplay();
-            } else if (cls === "Kämpfer") {
-                let maxSurge = lvl >= 17 ? 2 : (lvl >= 2 ? 1 : 0);
-                let maxWind = lvl >= 10 ? 3 : (lvl >= 4 ? 2 : 1);
-                let sMax = document.getElementById('surge-max');
-                let wMax = document.getElementById('wind-max');
-                if (sMax) sMax.value = maxSurge;
-                if (wMax) wMax.value = maxWind;
-                updateActionSurgeDisplay();
-                updateSecondWindDisplay();
-            } else if (cls === "Druide") {
-                let wMax = document.getElementById('wildform-max');
-                if (wMax) wMax.value = 2;
-                updateWildformDisplay();
-            } else if (cls === "Schurke") {
-                let sneakDice = Math.ceil(lvl / 2) + "W6";
-                let sElem = document.getElementById('sneak-atk-dice');
-                if (sElem) sElem.innerText = sneakDice;
-            }
-        }
-
-        function onClassChange() {
-            let clsEl = document.getElementById('char-class');
-            if (!clsEl) return;
-            let cls = clsEl.value;
-            let spellSection = document.getElementById('spell-section');
-            
-            let resBarbar = document.getElementById('res-barbar');
-            let resMoench = document.getElementById('res-moench');
-            let resKaempfer = document.getElementById('res-kaempfer');
-            let resSchurke = document.getElementById('res-schurke');
-            let resDruide = document.getElementById('res-druide');
-
-            if (resBarbar) resBarbar.classList.add('hidden');
-            if (resMoench) resMoench.classList.add('hidden');
-            if (resKaempfer) resKaempfer.classList.add('hidden');
-            if (resSchurke) resSchurke.classList.add('hidden');
-            if (resDruide) resDruide.classList.add('hidden');
-
-            if (cls === "Barbar" && resBarbar) resBarbar.classList.remove('hidden');
-            if (cls === "Mönch" && resMoench) resMoench.classList.remove('hidden');
-            if (cls === "Kämpfer" && resKaempfer) resKaempfer.classList.remove('hidden');
-            if (cls === "Schurke" && resSchurke) resSchurke.classList.remove('hidden');
-            if (cls === "Druide" && resDruide) resDruide.classList.remove('hidden');
-
-            const spellClasses = ["Barde", "Kleriker", "Druide", "Paladin", "Waldläufer", "Hexenmeister", "Zauberer", "Magier"];
-            if (spellSection) {
-                if (spellClasses.includes(cls)) spellSection.classList.remove('hidden');
-                else spellSection.classList.add('hidden');
-            }
-
-            autoScaleResources();
-            onSubclassChange();
-            updateAllCalculations();
-        }
-
-        function initCloudSync() {
-            let statusElem = document.getElementById('sync-status');
-            let debugBox = document.getElementById('dm-debug-box');
-
-            if (!firebase.apps.length) {
-                try {
-                    firebase.initializeApp(firebaseConfig);
-                    db = firebase.database();
-                    isCloudActive = true;
-                } catch (e) { isCloudActive = false; }
-            }
-
-            if (isCloudActive && db) {
-                if (statusElem) {
-                    statusElem.innerText = "Verbunden mit Raum: " + activeRoom + " (⚡)";
-                    statusElem.style.color = "var(--pos-color)";
-                }
-                if (debugBox) debugBox.innerHTML = `🔍 Verbunden mit Raum: <b>${activeRoom}</b>. Lausche auf Firebase...`;
-                
-                db.ref('rooms/' + activeRoom).on('value', (snapshot) => {
-                    let data = snapshot.val();
-                    renderPartyViews(data);
-                    if (currentRole === 'player') renderCharacterList();
-                }, (error) => {
-                    if (debugBox) debugBox.innerHTML = `❌ Firebase Fehler: ${error.message}`;
-                });
-            } else {
-                if (statusElem) {
-                    statusElem.innerText = "Lokal Modus";
-                    statusElem.style.color = "var(--text-muted)";
-                }
-                if (debugBox) debugBox.innerHTML = `❌ Cloud inaktiv (Lokal Modus).`;
-            }
-        }
-
-        function pushCharacterToCloud() {
-            if (!isCloudActive || !db || !currentActiveCharId || currentRole === 'dm') return;
-
-            let activeConcentration = '';
-            document.querySelectorAll('.spell-row').forEach(row => {
-                let concBox = row.querySelector('.spell-conc');
-                if (concBox && concBox.checked) {
-                    let nameBox = row.querySelector('.spell-name');
-                    if (nameBox) activeConcentration = nameBox.value;
-                }
-            });
-
-            let btnToggle = document.getElementById('btn-toggle-rage');
-            let charClassEl = document.getElementById('char-class');
-            let isRaging = (charClassEl && charClassEl.value === "Barbar" && btnToggle && btnToggle.classList.contains('active'));
-
-            let conditions = {
-                poisoned: document.getElementById('cond-poisoned').classList.contains('active'),
-                stunned: document.getElementById('cond-stunned').classList.contains('active'),
-                prone: document.getElementById('cond-prone').classList.contains('active'),
-                paralyzed: document.getElementById('cond-paralyzed').classList.contains('active')
-            };
-
-            let charData = {
-                user: currentUser,
-                id: currentActiveCharId,
-                name: document.getElementById('char-name').value || 'Helden-Charakter',
-                clazz: charClassEl ? charClassEl.value : 'Unbekannt',
-                subclass: document.getElementById('char-subclass').value || '',
-                concentration: activeConcentration,
-                starForm: document.getElementById('active-star-form') ? document.getElementById('active-star-form').value : '',
-                moonBeast: document.getElementById('moon-beast-name') ? document.getElementById('moon-beast-name').value : '',
-                moonBeastHp: document.getElementById('moon-beast-hp') ? document.getElementById('moon-beast-hp').value : '',
-                moonBeastAc: document.getElementById('moon-beast-ac') ? document.getElementById('moon-beast-ac').value : '',
-                isRaging: isRaging,
-                conditions: conditions,
-                level: document.getElementById('char-level').value || '1',
-                hpCurr: document.getElementById('hp-curr').value || '0',
-                hpMax: document.getElementById('hp-max').value || '0',
-                hpTemp: document.getElementById('hp-temp').value || '0',
-                ac: document.getElementById('ac').value || '10',
-                lastUpdate: Date.now()
-            };
-
-            db.ref('rooms/' + activeRoom + '/characters/' + currentUser + '_' + currentActiveCharId).update(charData);
-        }
-
-        function removeCharacterFromCloud(charId) {
-            if (!isCloudActive || !db) return;
-            db.ref('rooms/' + activeRoom + '/characters/' + currentUser + '_' + charId).remove();
-        }
-
-        function onSliderToggle(charId, checkbox) {
-            let activeInRoomCharId = localStorage.getItem('dnd_room_active_char_' + currentUser + '_' + activeRoom);
-
-            if (!checkbox.checked) {
-                if (activeInRoomCharId === charId) localStorage.removeItem('dnd_room_active_char_' + currentUser + '_' + activeRoom);
-                removeCharacterFromCloud(charId);
-            } else {
-                if (activeInRoomCharId && activeInRoomCharId !== charId) removeCharacterFromCloud(activeInRoomCharId);
-                localStorage.setItem('dnd_room_active_char_' + currentUser + '_' + activeRoom, charId);
-                loadCharacterData(charId);
-                pushCharacterToCloud();
-            }
-            renderCharacterList();
-        }
-
-        function renderPartyViews(data) {
-            let partyContainer = document.getElementById('party-list-container');
-            let dmContainer = document.getElementById('dm-list-container');
-
-            if (!data || !data.characters || Object.keys(data.characters).length === 0) {
-                if (partyContainer) partyContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 15px;">Keine Charaktere im Raum.</div>';
-                if (dmContainer) dmContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 15px;">Keine Helden aktiv.</div>';
-                return;
-            }
-
-            let partyHTML = '';
-            let dmHTML = '';
-
-            Object.entries(data.characters).forEach(([charKey, c]) => {
-                if (!c || typeof c !== 'object') return;
-
-                let name = c.name || 'Unbenannter Held';
-                let clazz = c.clazz || 'Abenteurer';
-                let level = c.level || '1';
-                let subclass = c.subclass || '';
-                let hpCurr = c.hpCurr !== undefined ? parseInt(c.hpCurr) : 0;
-                let hpMax = c.hpMax !== undefined ? parseInt(c.hpMax) : 1;
-                let ac = c.ac !== undefined ? c.ac : '10';
-
-                let hpPercent = Math.max(0, Math.min(100, (hpCurr / Math.max(1, hpMax)) * 100));
-                let hpColor = 'var(--pos-color)';
-                if (hpPercent <= 15) {
-                    hpColor = 'var(--neg-color)';
-                } else if (hpPercent < 50) {
-                    hpColor = 'var(--warning-color)';
-                }
-
-                let userTag = c.user ? ` <span style="font-size:0.75rem; color: var(--accent);">[${c.user.toUpperCase()}]</span>` : '';
-
-                let badgesHTML = '';
-                if (c.isRaging) badgesHTML += `<span class="dm-badge badge-rage">🔥 Wut aktiv</span>`;
-                if (c.concentration) badgesHTML += `<span class="dm-badge badge-conc">🔮 Konz: ${c.concentration}</span>`;
-                if (c.moonBeast) {
-                    let beastHp = c.moonBeastHp ? ` (HP: ${c.moonBeastHp})` : '';
-                    let beastAc = c.moonBeastAc ? ` [RK: ${c.moonBeastAc}]` : '';
-                    badgesHTML += `<span class="dm-badge badge-transform">🐾 Wildform: ${c.moonBeast}${beastHp}${beastAc}</span>`;
-                }
-                if (c.starForm) badgesHTML += `<span class="dm-badge badge-star">⭐ Sternenform: ${c.starForm}</span>`;
-
-                if (c.conditions) {
-                    if (c.conditions.poisoned) badgesHTML += `<span class="dm-badge badge-cond">☣️ Vergiftet</span>`;
-                    if (c.conditions.stunned) badgesHTML += `<span class="dm-badge badge-cond">💫 Betäubt</span>`;
-                    if (c.conditions.prone) badgesHTML += `<span class="dm-badge badge-cond">🛌 Liegend</span>`;
-                    if (c.conditions.paralyzed) badgesHTML += `<span class="dm-badge badge-cond">⚡ Gelähmt</span>`;
-                }
-
-                partyHTML += `
-                    <div class="party-card">
-                        <div class="party-card-top">
-                            <div class="party-info">
-                                <h3>${name}${userTag}</h3>
-                                <p>${clazz} (${level}) • ${subclass}</p>
-                            </div>
-                            <div class="party-stats">
-                                <div class="party-stat-box"><label>HP</label><span style="color: ${hpColor};">${hpCurr}/${hpMax}</span></div>
-                                <div class="party-stat-box"><label>AC</label><span style="color:var(--text-color);">${ac}</span></div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                let dmNoteVal = c.dmNote || '';
-                dmHTML += `
-                    <div class="party-card" style="border-left: 3px solid ${hpColor};">
-                        <div class="party-card-top">
-                            <div class="party-info">
-                                <h3>${name}${userTag} <span style="font-size: 0.75rem; color: var(--text-muted);">(${clazz} ${level})</span></h3>
-                                <p>Sub: ${subclass || '-'}</p>
-                            </div>
-                            <div class="party-stats">
-                                <div class="party-stat-box"><label>HP</label><span style="color: ${hpColor};">${hpCurr}/${hpMax}</span></div>
-                                <div class="party-stat-box"><label>RK</label><span style="color:var(--text-color);">${ac}</span></div>
-                            </div>
-                        </div>
-                        ${badgesHTML ? `<div class="dm-status-badges">${badgesHTML}</div>` : ''}
-                        <div class="dm-note-box">
-                            <label style="text-align: left; font-size: 0.65rem; color: var(--warning-color);">👑 Geheime DM-Notiz:</label>
-                            <input type="text" placeholder="Nur für den Spielleiter..." value="${dmNoteVal}" onchange="saveDMSecetNote('${charKey}', this.value)" style="font-size: 0.8rem; padding: 4px; text-align: left;">
-                        </div>
-                    </div>
-                `;
-            });
-
-            if (partyContainer) partyContainer.innerHTML = partyHTML || '<div style="text-align: center; color: var(--text-muted); padding: 15px;">Keine Charaktere im Raum.</div>';
-            if (dmContainer) dmContainer.innerHTML = dmHTML || '<div style="text-align: center; color: var(--text-muted); padding: 15px;">Keine Helden aktiv.</div>';
-        }
-
-        function switchMode(mode) {
-            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-            let lobby = document.getElementById('view-lobby');
-            let sheet = document.getElementById('view-sheet');
-            let party = document.getElementById('view-party');
-            let dm = document.getElementById('view-dm');
-
-            if (lobby) lobby.classList.add('hidden');
-            if (sheet) sheet.classList.add('hidden');
-            if (party) party.classList.add('hidden');
-            if (dm) dm.classList.add('hidden');
-
-            if (mode === 'lobby' && currentRole === 'player') {
-                let btnLobby = document.getElementById('btn-mode-lobby');
-                if (btnLobby) btnLobby.classList.add('active');
-                if (lobby) lobby.classList.remove('hidden');
-                renderCharacterList();
-            } else if (mode === 'sheet' && currentRole === 'player') {
-                if (!currentActiveCharId) {
-                    alert("Bitte wähle zuerst einen Charakter aus der Lobby aus!");
-                    switchMode('lobby');
-                    return;
-                }
-                let btnSheet = document.getElementById('btn-mode-sheet');
-                if (btnSheet) btnSheet.classList.add('active');
-                if (sheet) sheet.classList.remove('hidden');
-            } else if (mode === 'party' && currentRole === 'player') {
-                let btnParty = document.getElementById('btn-mode-party');
-                if (btnParty) btnParty.classList.add('active');
-                if (party) party.classList.remove('hidden');
-            } else if (mode === 'dm' && currentRole === 'dm') {
-                let btnDm = document.getElementById('btn-mode-dm');
-                if (btnDm) btnDm.classList.add('active');
-                if (dm) dm.classList.remove('hidden');
-            }
-        }
-
-        function getCharactersList() {
-            let list = localStorage.getItem('dnd_characters_index_' + currentUser);
-            return list ? JSON.parse(list) : [];
-        }
-
-        function saveCharactersList(list) {
-            localStorage.setItem('dnd_characters_index_' + currentUser, JSON.stringify(list));
-        }
-
-        function renderCharacterList() {
-            let chars = getCharactersList();
-            let container = document.getElementById('character-list-container');
-            let activeInRoomCharId = localStorage.getItem('dnd_room_active_char_' + currentUser + '_' + activeRoom);
-
-            if (!container) return;
-
-            if (chars.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 10px;">Keine Charaktere für ' + currentUser.toUpperCase() + ' vorhanden. Erstelle deinen ersten Helden!</div>';
-                return;
-            }
-
-            let html = '';
-            chars.forEach(c => {
-                let isActiveInRoom = (c.id === activeInRoomCharId);
-                html += `
-                    <div class="char-select-card">
-                        <div class="char-select-info" onclick="loadCharacter('${c.id}')" style="flex-grow: 1; cursor: pointer;">
-                            <h3>${c.name}</h3>
-                            <p>${c.clazz} (Stufe ${c.level}) • ${c.subclass || 'Keine Subklasse'}</p>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <div class="switch-container">
-                                <span class="switch-label">${isActiveInRoom ? 'Im Raum' : 'Inaktiv'}</span>
-                                <label class="switch">
-                                    <input type="checkbox" ${isActiveInRoom ? 'checked' : ''} onchange="onSliderToggle('${c.id}', this)">
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                            <span onclick="loadCharacter('${c.id}')" style="font-size: 0.75rem; color: var(--pos-color); font-weight: bold; cursor: pointer;">Auswählen ➔</span>
-                        </div>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
-        }
-
-        function createNewCharacter() {
-            let newId = 'char_' + Math.random().toString(36).substring(2, 9);
-            let chars = getCharactersList();
-            let defaultName = "Held von " + currentUser.toUpperCase();
-            chars.push({ id: newId, name: defaultName, clazz: 'Barbar', subclass: 'Pfad des Weltenbaums', level: '6' });
-            saveCharactersList(chars);
-
-            currentActiveCharId = newId;
-            localStorage.setItem('dnd_active_char_' + currentUser, newId);
-            localStorage.setItem('dnd_room_active_char_' + currentUser + '_' + activeRoom, newId);
-
-            localStorage.removeItem('dnd_sheet_data_' + currentUser + '_' + newId);
-            loadCharacterData(newId);
-            pushCharacterToCloud();
-            switchMode('sheet');
-        }
-
-        function loadCharacter(charId) {
-            currentActiveCharId = charId;
-            localStorage.setItem('dnd_active_char_' + currentUser, charId);
-            loadCharacterData(charId);
-            switchMode('sheet');
-        }
-
-        // VORGEFERTIGTE BEISPIEL-CHARAKTERE FÜR TEST1 BIS TEST4 (STUFE 6)
-        function loadDefaultPresetForUser(user) {
-            let newId = 'preset_' + user;
-            let preset = null;
-
-            if (user === 'test1') {
-                preset = {
-                    id: newId, name: 'Zar´thul Rocgarn', clazz: 'Barbar', subclass: 'Pfad des Weltenbaums', level: '6',
-                    'hp-curr': '59', 'hp-max': '59', 'hp-temp': '0', 'ac': '15', 'str': '16', 'dex': '14', 'con': '16', 'int': '8', 'wis': '10', 'cha': '10',
-                    weapons: [{ name: 'Großaxt +1', magic: '1', dice: '1W12' }],
-                    potions: [{ type: 'Heiltrank (1W4+4)', count: '2' }]
-                };
-            } else if (user === 'test2') {
-                preset = {
-                    id: newId, name: 'Malakor der Paktgebundene', clazz: 'Hexenmeister', subclass: 'Der Unterweltler', level: '6',
-                    'hp-curr': '45', 'hp-max': '45', 'hp-temp': '0', 'ac': '14', 'str': '8', 'dex': '14', 'con': '14', 'int': '10', 'wis': '12', 'cha': '18',
-                    'spell-attr': 'cha', 'slot-1-m': '2', 'slot-2-m': '0', 'slot-3-m': '2',
-                    spells: [{ prep: true, name: 'Eldritch Blast', level: '0', time: '1 Akt.', conc: false, notes: 'Magischer Strahl (Reichweite 36m)' },
-                             { prep: true, name: 'Hex (Hexenmal)', level: '1', time: '1 Bonus', conc: true, notes: '+1W6 Schaden bei Treffer' }],
-                    weapons: [{ name: 'Leichter Stab +1', magic: '1', dice: '1W6' }],
-                    potions: [{ type: 'Heiltrank (1W4+4)', count: '1' }]
-                };
-            } else if (user === 'test3') {
-                preset = {
-                    id: newId, name: 'Boren der Stille', clazz: 'Mönch', subclass: 'Weg der Offenen Hand', level: '6',
-                    'hp-curr': '52', 'hp-max': '52', 'hp-temp': '0', 'ac': '16', 'str': '10', 'dex': '18', 'con': '14', 'int': '10', 'wis': '16', 'cha': '8',
-                    weapons: [{ name: 'Unbewaffneter Schlag', magic: '1', dice: '1W6' }],
-                    potions: [{ type: 'Heiltrank (1W4+4)', count: '2' }]
-                };
-            } else if (user === 'test4') {
-                preset = {
-                    id: newId, name: 'Sir Alden', clazz: 'Kämpfer', subclass: 'Meister des Kampfs (Battle Master)', level: '6',
-                    'hp-curr': '60', 'hp-max': '60', 'hp-temp': '0', 'ac': '18', 'str': '18', 'dex': '10', 'con': '16', 'int': '10', 'wis': '12', 'cha': '10',
-                    weapons: [{ name: 'Großschwert +1', magic: '1', dice: '2W6' }],
-                    potions: [{ type: 'Großer Heiltrank (2W4+2)', count: '2' }]
-                };
-            }
-
-            if (preset) {
-                saveCharactersList([{ id: preset.id, name: preset.name, clazz: preset.clazz, subclass: preset.subclass, level: preset.level }]);
-                localStorage.setItem('dnd_sheet_data_' + user + '_' + preset.id, JSON.stringify(preset));
-                return preset.id;
-            }
-            return null;
-        }
-
-        function loadCharacterData(charId) {
-            updateSubclasses();
-            let saved = localStorage.getItem('dnd_sheet_data_' + currentUser + '_' + charId);
-            if (!saved) return;
-
-            let data = JSON.parse(saved);
-            Object.keys(data).forEach(id => {
-                let elem = document.getElementById(id);
-                if (elem) {
-                    if (elem.type === 'checkbox') elem.checked = data[id];
-                    else elem.value = data[id];
-                }
-            });
-
-            let btnToggle = document.getElementById('btn-toggle-rage');
-            if (data.isRaging && btnToggle) btnToggle.classList.add('active');
-            else if (btnToggle) btnToggle.classList.remove('active');
-
-            if (data.conditions) {
-                ['poisoned', 'stunned', 'prone', 'paralyzed'].forEach(cond => {
-                    let btn = document.getElementById('cond-' + cond);
-                    if (btn) btn.classList.toggle('active', !!data.conditions[cond]);
-                });
-            }
-
-            updateRageButtonText();
-            updateKiDisplay();
-            updateActionSurgeDisplay();
-            updateSecondWindDisplay();
-            updateWildformDisplay();
-
-            let spellsList = document.getElementById('spells-list');
-            if (spellsList) {
-                spellsList.innerHTML = '';
-                if (data.spells && data.spells.length > 0) {
-                    data.spells.forEach(s => addSpell(s.prep, s.name, s.level, s.time, s.conc, s.notes));
-                }
-            }
-
-            let weaponsList = document.getElementById('weapons-list');
-            if (weaponsList) {
-                weaponsList.innerHTML = '';
-                if (data.weapons && data.weapons.length > 0) {
-                    data.weapons.forEach(w => addWeapon(w.name, w.magic, w.dice));
-                } else {
-                    addWeapon('Waffe', 0, '1W8');
-                }
-            }
-
-            let potionsContainer = document.getElementById('potions-container');
-            if (potionsContainer) {
-                potionsContainer.innerHTML = '';
-                if (data.potions && data.potions.length > 0) {
-                    data.potions.forEach(p => addPotionSlot(p.type, p.count));
-                } else {
-                    addPotionSlot('Heiltrank (1W4+4)', 1);
-                }
-            }
-
-            onClassChange();
-            updateAllCalculations();
-        }
-
-        function getMod(val) { return isNaN(val) ? 0 : Math.floor((val - 10) / 2); }
-
-        function formatValue(elementId, val) {
-            let elem = document.getElementById(elementId);
-            if (!elem) return;
-            elem.innerText = (val >= 0 ? "+" + val : val);
-            if (val > 0) elem.style.color = "var(--pos-color)";
-            else if (val < 0) elem.style.color = "var(--neg-color)";
-            else elem.style.color = "var(--text-muted)";
-        }
-
-        function updateAllCalculations() {
-            let pbEl = document.getElementById('pb');
-            let pb = pbEl ? (parseInt(pbEl.value) || 0) : 0;
-            formatValue('pb-display', pb);
-
-            let strEl = document.getElementById('str');
-            let dexEl = document.getElementById('dex');
-            let conEl = document.getElementById('con');
-            let intEl = document.getElementById('int');
-            let wisEl = document.getElementById('wis');
-            let chaEl = document.getElementById('cha');
-
-            let strMod = getMod(strEl ? parseInt(strEl.value) : 10);
-            let dexMod = getMod(dexEl ? parseInt(dexEl.value) : 10);
-            let conMod = getMod(conEl ? parseInt(conEl.value) : 10);
-            let intMod = getMod(intEl ? parseInt(intEl.value) : 10);
-            let wisMod = getMod(wisEl ? parseInt(wisEl.value) : 10);
-            let chaMod = getMod(chaEl ? parseInt(chaEl.value) : 10);
-
-            formatValue('str-mod', strMod);
-            formatValue('dex-mod', dexMod);
-            formatValue('con-mod', conMod);
-            formatValue('int-mod', intMod);
-            formatValue('wis-mod', wisMod);
-            formatValue('cha-mod', chaMod);
-
-            let autoAcToggle = document.getElementById('auto-ac-toggle');
-            if (autoAcToggle && autoAcToggle.checked) {
-                let cls = document.getElementById('char-class').value;
-                let calculatedAc = 10;
-                if (cls === "Barbar") calculatedAc = 10 + dexMod + conMod;
-                else if (cls === "Mönch") calculatedAc = 10 + dexMod + wisMod;
-                let acField = document.getElementById('ac');
-                if (acField) acField.value = calculatedAc;
-            }
-
-            let weaponRows = document.querySelectorAll('.weapon-row');
-            weaponRows.forEach(row => {
-                let magicElem = row.querySelector('.weapon-magic');
-                let magicVal = magicElem ? (parseInt(magicElem.value) || 0) : 0;
-                let totalAtk = strMod + pb + magicVal;
-                let atkDisplay = row.querySelector('.weapon-atk-calc');
-                if (atkDisplay) atkDisplay.innerText = (totalAtk >= 0 ? "+" + totalAtk : totalAtk);
-            });
-
-            let skillsMap = {
-                'save-str': strMod, 'skill-athletik': strMod,
-                'save-dex': dexMod, 'skill-akrobatik': dexMod, 'skill-fingerfertigkeit': dexMod, 'skill-heimlichkeit': dexMod,
-                'save-con': conMod,
-                'save-int': intMod, 'skill-arkanekunde': intMod, 'skill-geschichte': intMod,
-                'save-wis': wisMod, 'skill-wahrnehmung': wisMod,
-                'save-cha': chaMod, 'skill-einschuechtern': chaMod
-            };
-
-            Object.keys(skillsMap).forEach(id => {
-                let checkbox = document.getElementById(id);
-                let valElem = document.getElementById('val-' + id);
-                if (checkbox && valElem) {
-                    let total = skillsMap[id] + (checkbox.checked ? pb : 0);
-                    valElem.innerText = (total >= 0 ? "+" + total : total);
-                    if (total > 0) valElem.style.color = "var(--pos-color)";
-                    else if (total < 0) valElem.style.color = "var(--neg-color)";
-                    else valElem.style.color = "var(--text-muted)";
-                }
-            });
-
-            let spellAttrEl = document.getElementById('spell-attr');
-            if (spellAttrEl) {
-                let spellAttr = spellAttrEl.value;
-                let spellMod = (spellAttr === 'int' ? intMod : (spellAttr === 'wis' ? wisMod : chaMod));
-                let dcDisp = document.getElementById('spell-dc-display');
-                if (dcDisp) dcDisp.innerText = 8 + pb + spellMod;
-                let spellAtk = pb + spellMod;
-                let atkDisp = document.getElementById('spell-atk-display');
-                if (atkDisp) atkDisp.innerText = (spellAtk >= 0 ? "+" + spellAtk : spellAtk);
-            }
-            autoScaleResources();
-        }
-
-        function toggleSpellNotes(btn) {
-            let wrapper = btn.closest('.spell-row-wrapper');
-            let notesContainer = wrapper.querySelector('.spell-notes-container');
-            notesContainer.classList.toggle('hidden');
-            btn.innerText = notesContainer.classList.contains('hidden') ? '▼' : '▲';
-        }
-
-        function addSpell(prep = false, name = '', level = '0', time = '1 Akt.', conc = false, notes = '') {
-            let list = document.getElementById('spells-list');
-            if (!list) return;
-            let wrapper = document.createElement('div');
-            wrapper.className = 'spell-row-wrapper';
-            wrapper.innerHTML = `
-                <div class="spell-row">
-                    <input type="checkbox" class="spell-prep" ${prep ? 'checked' : ''} onchange="saveData()">
-                    <input type="text" placeholder="Zauber Name" value="${name}" class="field-left spell-name" oninput="saveData()">
-                    <select class="spell-level" onchange="saveData()">
-                        <option value="0" ${level==='0'?'selected':''}>Trick</option>
-                        <option value="1" ${level==='1'?'selected':''}>1. Grad</option>
-                        <option value="2" ${level==='2'?'selected':''}>2. Grad</option>
-                        <option value="3" ${level==='3'?'selected':''}>3. Grad</option>
-                        <option value="4" ${level==='4'?'selected':''}>4. Grad</option>
-                        <option value="5" ${level==='5'?'selected':''}>5. Grad</option>
-                    </select>
-                    <input type="text" placeholder="Zeit" value="${time}" class="spell-time" oninput="saveData()">
-                    <input type="checkbox" class="spell-conc" ${conc ? 'checked' : ''} onchange="saveData()">
-                    <button type="button" class="btn-rest" onclick="toggleSpellNotes(this)" title="Notizen" style="padding:4px; font-size:0.7rem;">▼</button>
-                    <button type="button" class="btn-remove" onclick="this.closest('.spell-row-wrapper').remove(); saveData();">✕</button>
-                </div>
-                <div class="spell-notes-container ${notes ? '' : 'hidden'}">
-                    <textarea placeholder="Zauber-Notizen & Effekte..." class="spell-notes" oninput="saveData()">${notes}</textarea>
-                </div>
-            `;
-            list.appendChild(wrapper);
-        }
-
-        function addWeapon(name = '', magic = 0, dice = '1W12') {
-            let list = document.getElementById('weapons-list');
-            if (!list) return;
-            let newRow = document.createElement('div');
-            newRow.className = 'weapon-row';
-            newRow.innerHTML = `
-                <input type="text" placeholder="Waffe" value="${name}" class="field-left weapon-name" oninput="saveData()">
-                <input type="number" placeholder="0" value="${magic}" class="weapon-magic" oninput="updateAllCalculations(); saveData();">
-                <input type="text" placeholder="1W12" value="${dice}" class="weapon-dice" oninput="saveData()">
-                <div class="calc-display weapon-atk-calc">+0</div>
-                <button type="button" class="btn-remove" onclick="this.parentElement.remove(); saveData();">✕</button>
-            `;
-            list.appendChild(newRow);
-            updateAllCalculations();
-        }
-
-        function addPotionSlot(selectedType = 'Heiltrank (1W4+4)', count = 1) {
-            let list = document.getElementById('potions-container');
-            if (!list) return;
-            let row = document.createElement('div');
-            row.className = 'char-select-card';
-            row.style.marginBottom = '6px';
-            row.style.padding = '8px';
-            row.innerHTML = `
-                <div style="flex-grow: 1; margin-right: 8px;">
-                    <select class="potion-type" onchange="saveData()">
-                        <option value="Heiltrank (1W4+4)" ${selectedType==='Heiltrank (1W4+4)'?'selected':''}>🧪 Heiltrank (1W4+4)</option>
-                        <option value="Großer Heiltrank (2W4+2)" ${selectedType==='Großer Heiltrank (2W4+2)'?'selected':''}>🧪 Großer Heiltrank (2W4+2)</option>
-                        <option value="Überlegener Heiltrank (4W4+4)" ${selectedType==='Überlegener Heiltrank (4W4+4)'?'selected':''}>🧪 Überlegener Heiltrank (4W4+4)</option>
-                        <option value="Höchster Heiltrank (8W4+8)" ${selectedType==='Höchster Heiltrank (8W4+8)'?'selected':''}>🧪 Höchster Heiltrank (8W4+8)</option>
-                        <option value="Gegengift" ${selectedType==='Gegengift'?'selected':''}>🟢 Gegengift</option>
-                        <option value="Manatrank / Arkane Essenz" ${selectedType==='Manatrank / Arkane Essenz'?'selected':''}>🔵 Manatrank / Arkane Essenz</option>
-                        <option value="Custom Item" ${selectedType==='Custom Item'?'selected':''}>✨ Eigenes Item</option>
-                    </select>
-                </div>
-                <div style="display: flex; align-items: center; gap: 6px;">
-                    <button type="button" class="btn-rest" onclick="adjustPotionRow(this, -1)">-</button>
-                    <input type="number" class="potion-count" value="${count}" oninput="saveData()" style="width: 45px; padding: 4px;">
-                    <button type="button" class="btn-rest" onclick="adjustPotionRow(this, 1)">+</button>
-                    <button type="button" class="btn-remove" onclick="this.closest('.char-select-card').remove(); saveData();" style="height:32px; width:32px;">✕</button>
-                </div>
-            `;
-            list.appendChild(row);
-        }
-
-        function adjustPotionRow(btn, amount) {
-            let input = btn.parentElement.querySelector('.potion-count');
-            let val = (parseInt(input.value) || 0) + amount;
-            input.value = Math.max(0, val);
-            saveData();
-        }
-
-        function saveData() {
-            if (!currentActiveCharId || !currentUser || currentRole === 'dm') return;
-            
-            let data = {};
-            document.querySelectorAll('#view-sheet input, #view-sheet select, #view-sheet textarea').forEach(elem => {
-                if (elem.id && !elem.closest('.spell-row-wrapper') && !elem.closest('.weapon-row') && !elem.closest('#potions-container')) {
-                    data[elem.id] = (elem.type === 'checkbox') ? elem.checked : elem.value;
-                }
-            });
-
-            let btnToggle = document.getElementById('btn-toggle-rage');
-            data.isRaging = (btnToggle && btnToggle.classList.contains('active'));
-            let rCurr = document.getElementById('rage-curr');
-            let rMax = document.getElementById('rage-max');
             let kiCurr = document.getElementById('ki-curr');
+            let kiMax = document.getElementById('ki-max');
+            if (kiCurr && kiMax) kiCurr.value = kiMax.value;
+            updateKiDisplay();
+
+            let surgeCurr = document.getElementById('surge-curr');
+            let surgeMax = document.getElementById('surge-max');
+            if (surgeCurr && surgeMax) surgeCurr.value = surgeMax.value;
+            updateActionSurgeDisplay();
+
+            let windCurr = document.getElementById('wind-curr');
+            let windMax = document.getElementById('wind-max');
+            if (windCurr && windMax) windCurr.value = windMax.value;
+            updateSecondWindDisplay();
+
+            let wildCurr = document.getElementById('wildform-curr');
+            let wildMax = document.getElementById('wildform-max');
+            if (wildCurr && wildMax) wildCurr.value = wildMax.value;
+            updateWildformDisplay();
+
+            saveData();
+            alert("🏕️ Lange Rast abgeschlossen! Alle Ressourcen wieder voll.");
+        }
+    }
+
+    function triggerShortRest() {
+        let cls = document.getElementById('char-class');
+        if (!cls) return;
+        if (cls.value === "Hexenmeister") { let s1 = document.getElementById('slot-1-c'); if (s1) s1.value = 0; }
+        if (cls.value === "Kämpfer") {
             let sCurr = document.getElementById('surge-curr');
+            let sMax = document.getElementById('surge-max');
+            if (sCurr && sMax) sCurr.value = sMax.value;
+            updateActionSurgeDisplay();
             let wCurr = document.getElementById('wind-curr');
-            let wWild = document.getElementById('wildform-curr');
+            let wMax = document.getElementById('wind-max');
+            if (wCurr && wMax) wCurr.value = wMax.value;
+            updateSecondWindDisplay();
+        }
+        saveData();
+        alert("☕ Kurze Rast abgeschlossen!");
+    }
 
-            if (rCurr) data.rageCurr = rCurr.value;
-            if (rMax) data.rageMax = rMax.value;
-            if (kiCurr) data.kiCurr = kiCurr.value;
-            if (sCurr) data.surgeCurr = sCurr.value;
-            if (wCurr) data.windCurr = wCurr.value;
-            if (wWild) data.wildformCurr = wWild.value;
+    function updateSubclasses() {
+        let clsEl = document.getElementById('char-class');
+        let subSelect = document.getElementById('char-subclass');
+        if (!clsEl || !subSelect) return;
+        subSelect.innerHTML = '';
+        
+        let list = subclassData[clsEl.value] || ["Allgemein"];
+        list.forEach(sub => {
+            let opt = document.createElement('option');
+            opt.value = sub;
+            opt.innerText = sub;
+            subSelect.appendChild(opt);
+        });
+        onSubclassChange();
+    }
 
-            data.conditions = {
-                poisoned: document.getElementById('cond-poisoned').classList.contains('active'),
-                stunned: document.getElementById('cond-stunned').classList.contains('active'),
-                prone: document.getElementById('cond-prone').classList.contains('active'),
-                paralyzed: document.getElementById('cond-paralyzed').classList.contains('active')
-            };
+    function setStarForm(formName) {
+        let formInput = document.getElementById('active-star-form');
+        if (!formInput) return;
+        let current = formInput.value;
+        let next = (current === formName) ? '' : formName;
+        formInput.value = next;
 
-            let weapons = [];
-            document.querySelectorAll('.weapon-row').forEach(row => {
-                let wName = row.querySelector('.weapon-name');
-                let wMag = row.querySelector('.weapon-magic');
-                let wDice = row.querySelector('.weapon-dice');
-                weapons.push({
-                    name: wName ? wName.value : '',
-                    magic: wMag ? wMag.value : '0',
-                    dice: wDice ? wDice.value : '1W8'
-                });
-            });
-            data.weapons = weapons;
+        let f1 = document.getElementById('star-form-1');
+        let f2 = document.getElementById('star-form-2');
+        let f3 = document.getElementById('star-form-3');
+        if (f1) f1.classList.toggle('active', next === 'Meckler');
+        if (f2) f2.classList.toggle('active', next === 'Kelch');
+        if (f3) f3.classList.toggle('active', next === 'Drache');
+        saveData();
+    }
 
-            let spells = [];
-            document.querySelectorAll('.spell-row-wrapper').forEach(wrapper => {
-                let sPrep = wrapper.querySelector('.spell-prep');
-                let sName = wrapper.querySelector('.spell-name');
-                let sLvl = wrapper.querySelector('.spell-level');
-                let sTime = wrapper.querySelector('.spell-time');
-                let sConc = wrapper.querySelector('.spell-conc');
-                let sNotes = wrapper.querySelector('.spell-notes');
-                spells.push({
-                    prep: sPrep ? sPrep.checked : false,
-                    name: sName ? sName.value : '',
-                    level: sLvl ? sLvl.value : '0',
-                    time: sTime ? sTime.value : '',
-                    conc: sConc ? sConc.checked : false,
-                    notes: sNotes ? sNotes.value : ''
-                });
-            });
-            data.spells = spells;
+    function onSubclassChange() {
+        let clsEl = document.getElementById('char-class');
+        let subSelect = document.getElementById('char-subclass');
+        if (!clsEl || !subSelect) return;
+        let cls = clsEl.value;
+        let sub = subSelect.value;
 
-            let potions = [];
-            document.querySelectorAll('#potions-container .char-select-card').forEach(card => {
-                let pType = card.querySelector('.potion-type');
-                let pCount = card.querySelector('.potion-count');
-                potions.push({
-                    type: pType ? pType.value : '',
-                    count: pCount ? pCount.value : '1'
-                });
-            });
-            data.potions = potions;
+        let subresMoon = document.getElementById('subres-moon');
+        let subresStars = document.getElementById('subres-stars');
+        let subresBM = document.getElementById('subres-battlemaster');
+        let subresWorldTree = document.getElementById('subres-worldtree');
 
-            localStorage.setItem('dnd_sheet_data_' + currentUser + '_' + currentActiveCharId, JSON.stringify(data));
+        if (subresMoon) subresMoon.classList.add('hidden');
+        if (subresStars) subresStars.classList.add('hidden');
+        if (subresBM) subresBM.classList.add('hidden');
+        if (subresWorldTree) subresWorldTree.classList.add('hidden');
 
-            let chars = getCharactersList();
-            let cIndex = chars.findIndex(c => c.id === currentActiveCharId);
-            let nameEl = document.getElementById('char-name');
-            let classEl = document.getElementById('char-class');
-            let subEl = document.getElementById('char-subclass');
-            let lvlEl = document.getElementById('char-level');
+        if (cls === "Druide") {
+            if (sub === "Zirkel des Mondes") subresMoon.classList.remove('hidden');
+            if (sub === "Zirkel der Sterne") subresStars.classList.remove('hidden');
+        } else if (cls === "Kämpfer" && sub.includes("Battle Master")) {
+            if (subresBM) subresBM.classList.remove('hidden');
+        } else if (cls === "Barbar" && sub.includes("Weltenbaum")) {
+            if (subresWorldTree) subresWorldTree.classList.remove('hidden');
+        }
+    }
 
-            let cName = nameEl ? nameEl.value : 'Helden-Charakter';
-            let cClass = classEl ? classEl.value : 'Abenteurer';
-            let cSub = subEl ? subEl.value : '';
-            let cLvl = lvlEl ? lvlEl.value : '1';
+    function autoScaleResources() {
+        let clsEl = document.getElementById('char-class');
+        let lvlEl = document.getElementById('char-level');
+        if (!clsEl || !lvlEl) return;
+        let cls = clsEl.value;
+        let lvl = parseInt(lvlEl.value) || 1;
 
-            if (cIndex >= 0) {
-                chars[cIndex] = { id: currentActiveCharId, name: cName, clazz: cClass, subclass: cSub, level: cLvl };
-            } else {
-                chars.push({ id: currentActiveCharId, name: cName, clazz: cClass, subclass: cSub, level: cLvl });
-            }
-            saveCharactersList(chars);
+        if (cls === "Barbar") {
+            let maxRage = lvl >= 17 ? 6 : (lvl >= 12 ? 5 : (lvl >= 6 ? 4 : (lvl >= 3 ? 3 : 2)));
+            let rMax = document.getElementById('rage-max');
+            if (rMax) rMax.value = maxRage;
+            let rCurr = document.getElementById('rage-curr');
+            if (rCurr && (isNaN(parseInt(rCurr.value)) || parseInt(rCurr.value) > maxRage)) rCurr.value = maxRage;
+            updateRageButtonText();
+        } else if (cls === "Mönch") {
+            let kiMax = lvl;
+            let kMax = document.getElementById('ki-max');
+            if (kMax) kMax.value = kiMax;
+            let kCurr = document.getElementById('ki-curr');
+            if (kCurr && (isNaN(parseInt(kCurr.value)) || parseInt(kCurr.value) > kiMax)) kCurr.value = kiMax;
+            updateKiDisplay();
+        } else if (cls === "Kämpfer") {
+            let maxSurge = lvl >= 17 ? 2 : (lvl >= 2 ? 1 : 0);
+            let maxWind = lvl >= 10 ? 3 : (lvl >= 4 ? 2 : 1);
+            let sMax = document.getElementById('surge-max');
+            let wMax = document.getElementById('wind-max');
+            if (sMax) sMax.value = maxSurge;
+            if (wMax) wMax.value = maxWind;
+            updateActionSurgeDisplay();
+            updateSecondWindDisplay();
+        } else if (cls === "Druide") {
+            let wMax = document.getElementById('wildform-max');
+            if (wMax) wMax.value = 2;
+            updateWildformDisplay();
+        } else if (cls === "Schurke") {
+            let sneakDice = Math.ceil(lvl / 2) + "W6";
+            let sElem = document.getElementById('sneak-atk-dice');
+            if (sElem) sElem.innerText = sneakDice;
+        }
+    }
 
-            let activeInRoomCharId = localStorage.getItem('dnd_room_active_char_' + currentUser + '_' + activeRoom);
-            if (activeInRoomCharId === currentActiveCharId) {
-                pushCharacterToCloud();
-            }
+    function onClassChange() {
+        let clsEl = document.getElementById('char-class');
+        if (!clsEl) return;
+        let cls = clsEl.value;
+        let spellSection = document.getElementById('spell-section');
+        
+        let resBarbar = document.getElementById('res-barbar');
+        let resMoench = document.getElementById('res-moench');
+        let resKaempfer = document.getElementById('res-kaempfer');
+        let resSchurke = document.getElementById('res-schurke');
+        let resDruide = document.getElementById('res-druide');
+
+        if (resBarbar) resBarbar.classList.add('hidden');
+        if (resMoench) resMoench.classList.add('hidden');
+        if (resKaempfer) resKaempfer.classList.add('hidden');
+        if (resSchurke) resSchurke.classList.add('hidden');
+        if (resDruide) resDruide.classList.add('hidden');
+
+        if (cls === "Barbar" && resBarbar) resBarbar.classList.remove('hidden');
+        if (cls === "Mönch" && resMoench) resMoench.classList.remove('hidden');
+        if (cls === "Kämpfer" && resKaempfer) resKaempfer.classList.remove('hidden');
+        if (cls === "Schurke" && resSchurke) resSchurke.classList.remove('hidden');
+        if (cls === "Druide" && resDruide) resDruide.classList.remove('hidden');
+
+        const spellClasses = ["Barde", "Kleriker", "Druide", "Paladin", "Waldläufer", "Hexenmeister", "Zauberer", "Magier"];
+        if (spellSection) {
+            if (spellClasses.includes(cls)) spellSection.classList.remove('hidden');
+            else spellSection.classList.add('hidden');
         }
 
-        function initApp() {
-            let savedRoom = localStorage.getItem('dnd_active_room_' + currentUser);
-            if (savedRoom) {
-                activeRoom = savedRoom;
-                let joinInput = document.getElementById('join-room-input');
-                let dmInput = document.getElementById('dm-room-code-input');
-                if (joinInput) joinInput.value = activeRoom;
-                if (dmInput) dmInput.value = activeRoom;
+        autoScaleResources();
+        onSubclassChange();
+        updateAllCalculations();
+    }
+
+    function initCloudSync() {
+        let statusElem = document.getElementById('sync-status');
+        let debugBox = document.getElementById('dm-debug-box');
+
+        if (!firebase.apps.length) {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.database();
+                isCloudActive = true;
+            } catch (e) { isCloudActive = false; }
+        }
+
+        if (isCloudActive && db) {
+            if (statusElem) {
+                statusElem.innerText = "Verbunden mit Raum: " + activeRoom + " (⚡)";
+                statusElem.style.color = "var(--pos-color)";
+            }
+            if (debugBox) debugBox.innerHTML = `🔍 Verbunden mit Raum: <b>${activeRoom}</b>. Lausche auf Firebase...`;
+            
+            db.ref('rooms/' + activeRoom).on('value', (snapshot) => {
+                let data = snapshot.val();
+                renderPartyViews(data);
+                if (currentRole === 'player') renderCharacterList();
+            }, (error) => {
+                if (debugBox) debugBox.innerHTML = `❌ Firebase Fehler: ${error.message}`;
+            });
+
+            if (currentUser) registerSingleSession();
+        } else {
+            if (statusElem) {
+                statusElem.innerText = "Lokal Modus";
+                statusElem.style.color = "var(--text-muted)";
+            }
+            if (debugBox) debugBox.innerHTML = `❌ Cloud inaktiv (Lokal Modus).`;
+        }
+    }
+
+    function pushCharacterToCloud() {
+        if (!isCloudActive || !db || !currentActiveCharId || currentRole === 'dm') return;
+
+        let activeConcentration = '';
+        document.querySelectorAll('.spell-row').forEach(row => {
+            let concBox = row.querySelector('.spell-conc');
+            if (concBox && concBox.checked) {
+                let nameBox = row.querySelector('.spell-name');
+                if (nameBox) activeConcentration = nameBox.value;
+            }
+        });
+
+        let btnToggle = document.getElementById('btn-toggle-rage');
+        let charClassEl = document.getElementById('char-class');
+        let isRaging = (charClassEl && charClassEl.value === "Barbar" && btnToggle && btnToggle.classList.contains('active'));
+
+        let conditions = {
+            poisoned: document.getElementById('cond-poisoned').classList.contains('active'),
+            stunned: document.getElementById('cond-stunned').classList.contains('active'),
+            prone: document.getElementById('cond-prone').classList.contains('active'),
+            paralyzed: document.getElementById('cond-paralyzed').classList.contains('active')
+        };
+
+        let charData = {
+            user: currentUser,
+            id: currentActiveCharId,
+            name: document.getElementById('char-name').value || 'Helden-Charakter',
+            clazz: charClassEl ? charClassEl.value : 'Unbekannt',
+            subclass: document.getElementById('char-subclass').value || '',
+            concentration: activeConcentration,
+            starForm: document.getElementById('active-star-form') ? document.getElementById('active-star-form').value : '',
+            moonBeast: document.getElementById('moon-beast-name') ? document.getElementById('moon-beast-name').value : '',
+            moonBeastHp: document.getElementById('moon-beast-hp') ? document.getElementById('moon-beast-hp').value : '',
+            moonBeastAc: document.getElementById('moon-beast-ac') ? document.getElementById('moon-beast-ac').value : '',
+            isRaging: isRaging,
+            conditions: conditions,
+            level: document.getElementById('char-level').value || '1',
+            hpCurr: document.getElementById('hp-curr').value || '0',
+            hpMax: document.getElementById('hp-max').value || '0',
+            hpTemp: document.getElementById('hp-temp').value || '0',
+            ac: document.getElementById('ac').value || '10',
+            lastUpdate: Date.now()
+        };
+
+        db.ref('rooms/' + activeRoom + '/characters/' + currentUser + '_' + currentActiveCharId).update(charData);
+    }
+
+    function removeCharacterFromCloud(charId) {
+        if (!isCloudActive || !db) return;
+        db.ref('rooms/' + activeRoom + '/characters/' + currentUser + '_' + charId).remove();
+    }
+
+    function onSliderToggle(charId, checkbox) {
+        let activeInRoomCharId = localStorage.getItem('dnd_room_active_char_' + currentUser + '_' + activeRoom);
+
+        if (!checkbox.checked) {
+            if (activeInRoomCharId === charId) localStorage.removeItem('dnd_room_active_char_' + currentUser + '_' + activeRoom);
+            removeCharacterFromCloud(charId);
+        } else {
+            if (activeInRoomCharId && activeInRoomCharId !== charId) removeCharacterFromCloud(activeInRoomCharId);
+            localStorage.setItem('dnd_room_active_char_' + currentUser + '_' + activeRoom, charId);
+            loadCharacterData(charId);
+            pushCharacterToCloud();
+        }
+        renderCharacterList();
+    }
+
+    function renderPartyViews(data) {
+        let partyContainer = document.getElementById('party-list-container');
+        let dmContainer = document.getElementById('dm-list-container');
+
+        if (!data || !data.characters || Object.keys(data.characters).length === 0) {
+            if (partyContainer) partyContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 15px;">Keine Charaktere im Raum.</div>';
+            if (dmContainer) dmContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 15px;">Keine Helden aktiv.</div>';
+            return;
+        }
+
+        let partyHTML = '';
+        let dmHTML = '';
+
+        Object.entries(data.characters).forEach(([charKey, c]) => {
+            if (!c || typeof c !== 'object') return;
+
+            let name = c.name || 'Unbenannter Held';
+            let clazz = c.clazz || 'Abenteurer';
+            let level = c.level || '1';
+            let subclass = c.subclass || '';
+            let hpCurr = c.hpCurr !== undefined ? parseInt(c.hpCurr) : 0;
+            let hpMax = c.hpMax !== undefined ? parseInt(c.hpMax) : 1;
+            let ac = c.ac !== undefined ? c.ac : '10';
+
+            let hpPercent = Math.max(0, Math.min(100, (hpCurr / Math.max(1, hpMax)) * 100));
+            let hpColor = 'var(--pos-color)';
+            if (hpPercent <= 15) {
+                hpColor = 'var(--neg-color)';
+            } else if (hpPercent < 50) {
+                hpColor = 'var(--warning-color)';
             }
 
-            if (currentRole === 'player') {
-                let chars = getCharactersList();
-                if (chars.length === 0) {
-                    let presetId = loadDefaultPresetForUser(currentUser);
-                    if (!presetId) {
-                        let defaultId = 'char_' + currentUser;
-                        chars.push({ id: defaultId, name: 'Held von ' + currentUser.toUpperCase(), clazz: 'Barbar', subclass: 'Pfad des Weltenbaums', level: '6' });
-                        saveCharactersList(chars);
-                    }
-                }
+            let userTag = c.user ? ` <span style="font-size:0.75rem; color: var(--accent);">[${c.user.toUpperCase()}]</span>` : '';
 
-                chars = getCharactersList();
-                let lastChar = localStorage.getItem('dnd_active_char_' + currentUser) || (chars[0] ? chars[0].id : null);
-                if (!lastChar && chars.length > 0) lastChar = chars[0].id;
-                currentActiveCharId = lastChar;
-                initCloudSync();
+            let badgesHTML = '';
+            if (c.isRaging) badgesHTML += `<span class="dm-badge badge-rage">🔥 Wut aktiv</span>`;
+            if (c.concentration) badgesHTML += `<span class="dm-badge badge-conc">🔮 Konz: ${c.concentration}</span>`;
+            if (c.moonBeast) {
+                let beastHp = c.moonBeastHp ? ` (HP: ${c.moonBeastHp})` : '';
+                let beastAc = c.moonBeastAc ? ` [RK: ${c.moonBeastAc}]` : '';
+                badgesHTML += `<span class="dm-badge badge-transform">🐾 Wildform: ${c.moonBeast}${beastHp}${beastAc}</span>`;
+            }
+            if (c.starForm) badgesHTML += `<span class="dm-badge badge-star">⭐ Sternenform: ${c.starForm}</span>`;
+
+            if (c.conditions) {
+                if (c.conditions.poisoned) badgesHTML += `<span class="dm-badge badge-cond">☣️ Vergiftet</span>`;
+                if (c.conditions.stunned) badgesHTML += `<span class="dm-badge badge-cond">💫 Betäubt</span>`;
+                if (c.conditions.prone) badgesHTML += `<span class="dm-badge badge-cond">🛌 Liegend</span>`;
+                if (c.conditions.paralyzed) badgesHTML += `<span class="dm-badge badge-cond">⚡ Gelähmt</span>`;
+            }
+
+            partyHTML += `
+                <div class="party-card">
+                    <div class="party-card-top">
+                        <div class="party-info">
+                            <h3>${name}${userTag}</h3>
+                            <p>${clazz} (${level}) • ${subclass}</p>
+                        </div>
+                        <div class="party-stats">
+                            <div class="party-stat-box"><label>HP</label><span style="color: ${hpColor};">${hpCurr}/${hpMax}</span></div>
+                            <div class="party-stat-box"><label>AC</label><span style="color:var(--text-color);">${ac}</span></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            let dmNoteVal = c.dmNote || '';
+            dmHTML += `
+                <div class="party-card" style="border-left: 3px solid ${hpColor};">
+                    <div class="party-card-top">
+                        <div class="party-info">
+                            <h3>${name}${userTag} <span style="font-size: 0.75rem; color: var(--text-muted);">(${clazz} ${level})</span></h3>
+                            <p>Sub: ${subclass || '-'}</p>
+                        </div>
+                        <div class="party-stats">
+                            <div class="party-stat-box"><label>HP</label><span style="color: ${hpColor};">${hpCurr}/${hpMax}</span></div>
+                            <div class="party-stat-box"><label>RK</label><span style="color:var(--text-color);">${ac}</span></div>
+                            <button type="button" class="btn-remove" onclick="dmKickCharacter('${charKey}')" title="Aus Raum kicken" style="margin-left: 8px; height: 32px; width: 32px;">✕</button>
+                        </div>
+                    </div>
+                    ${badgesHTML ? `<div class="dm-status-badges">${badgesHTML}</div>` : ''}
+                    <div class="dm-note-box">
+                        <label style="text-align: left; font-size: 0.65rem; color: var(--warning-color);">👑 Geheime DM-Notiz:</label>
+                        <input type="text" placeholder="Nur für den Spielleiter..." value="${dmNoteVal}" onchange="saveDMSecetNote('${charKey}', this.value)" style="font-size: 0.8rem; padding: 4px; text-align: left;">
+                    </div>
+                </div>
+            `;
+        });
+
+        if (partyContainer) partyContainer.innerHTML = partyHTML || '<div style="text-align: center; color: var(--text-muted); padding: 15px;">Keine Charaktere im Raum.</div>';
+        if (dmContainer) dmContainer.innerHTML = dmHTML || '<div style="text-align: center; color: var(--text-muted); padding: 15px;">Keine Helden aktiv.</div>';
+    }
+
+    function switchMode(mode) {
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        let lobby = document.getElementById('view-lobby');
+        let sheet = document.getElementById('view-sheet');
+        let party = document.getElementById('view-party');
+        let dm = document.getElementById('view-dm');
+
+        if (lobby) lobby.classList.add('hidden');
+        if (sheet) sheet.classList.add('hidden');
+        if (party) party.classList.add('hidden');
+        if (dm) dm.classList.add('hidden');
+
+        if (mode === 'lobby' && currentRole === 'player') {
+            let btnLobby = document.getElementById('btn-mode-lobby');
+            if (btnLobby) btnLobby.classList.add('active');
+            if (lobby) lobby.classList.remove('hidden');
+            renderCharacterList();
+        } else if (mode === 'sheet' && currentRole === 'player') {
+            if (!currentActiveCharId) {
+                alert("Bitte wähle zuerst einen Charakter aus der Lobby aus!");
                 switchMode('lobby');
-            } else {
-                initCloudSync();
-                switchMode('dm');
+                return;
+            }
+            let btnSheet = document.getElementById('btn-mode-sheet');
+            if (btnSheet) btnSheet.classList.add('active');
+            if (sheet) sheet.classList.remove('hidden');
+        } else if (mode === 'party' && currentRole === 'player') {
+            let btnParty = document.getElementById('btn-mode-party');
+            if (btnParty) btnParty.classList.add('active');
+            if (party) party.classList.remove('hidden');
+        } else if (mode === 'dm' && currentRole === 'dm') {
+            let btnDm = document.getElementById('btn-mode-dm');
+            if (btnDm) btnDm.classList.add('active');
+            if (dm) dm.classList.remove('hidden');
+        }
+    }
+
+    function getCharactersList() {
+        let list = localStorage.getItem('dnd_characters_index_' + currentUser);
+        return list ? JSON.parse(list) : [];
+    }
+
+    function saveCharactersList(list) {
+        localStorage.setItem('dnd_characters_index_' + currentUser, JSON.stringify(list));
+    }
+
+    function renderCharacterList() {
+        let chars = getCharactersList();
+        let container = document.getElementById('character-list-container');
+        let activeInRoomCharId = localStorage.getItem('dnd_room_active_char_' + currentUser + '_' + activeRoom);
+
+        if (!container) return;
+
+        if (chars.length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 10px;">Keine Charaktere für ' + currentUser.toUpperCase() + ' vorhanden. Erstelle deinen ersten Helden!</div>';
+            return;
+        }
+
+        let html = '';
+        chars.forEach(c => {
+            let isActiveInRoom = (c.id === activeInRoomCharId);
+            html += `
+                <div class="char-select-card">
+                    <div class="char-select-info" onclick="loadCharacter('${c.id}')" style="flex-grow: 1; cursor: pointer;">
+                        <h3>${c.name}</h3>
+                        <p>${c.clazz} (Stufe ${c.level}) • ${c.subclass || 'Keine Subklasse'}</p>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="switch-container">
+                            <span class="switch-label">${isActiveInRoom ? 'Im Raum' : 'Inaktiv'}</span>
+                            <label class="switch">
+                                <input type="checkbox" ${isActiveInRoom ? 'checked' : ''} onchange="onSliderToggle('${c.id}', this)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <span onclick="loadCharacter('${c.id}')" style="font-size: 0.75rem; color: var(--pos-color); font-weight: bold; cursor: pointer;">Auswählen ➔</span>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+
+    function createNewCharacter() {
+        let newId = 'char_' + Math.random().toString(36).substring(2, 9);
+        let chars = getCharactersList();
+        let defaultName = "Held von " + currentUser.toUpperCase();
+        chars.push({ id: newId, name: defaultName, clazz: 'Barbar', subclass: 'Pfad des Weltenbaums', level: '6' });
+        saveCharactersList(chars);
+
+        currentActiveCharId = newId;
+        localStorage.setItem('dnd_active_char_' + currentUser, newId);
+        localStorage.setItem('dnd_room_active_char_' + currentUser + '_' + activeRoom, newId);
+
+        localStorage.removeItem('dnd_sheet_data_' + currentUser + '_' + newId);
+        loadCharacterData(newId);
+        pushCharacterToCloud();
+        switchMode('sheet');
+    }
+
+    function loadCharacter(charId) {
+        currentActiveCharId = charId;
+        localStorage.setItem('dnd_active_char_' + currentUser, charId);
+        loadCharacterData(charId);
+        switchMode('sheet');
+    }
+
+    function loadDefaultPresetForUser(user) {
+        let newId = 'preset_' + user;
+        let preset = null;
+
+        if (user === 'test1') {
+            preset = {
+                id: newId, name: 'Zar´thul Rocgarn', clazz: 'Barbar', subclass: 'Pfad des Weltenbaums', level: '6',
+                'hp-curr': '59', 'hp-max': '59', 'hp-temp': '0', 'ac': '15', 'str': '16', 'dex': '14', 'con': '16', 'int': '8', 'wis': '10', 'cha': '10',
+                weapons: [{ name: 'Großaxt +1', magic: '1', dice: '1W12' }],
+                potions: [{ type: 'Heiltrank (1W4+4)', count: '2' }]
+            };
+        } else if (user === 'test2') {
+            preset = {
+                id: newId, name: 'Malakor der Paktgebundene', clazz: 'Hexenmeister', subclass: 'Der Unterweltler', level: '6',
+                'hp-curr': '45', 'hp-max': '45', 'hp-temp': '0', 'ac': '14', 'str': '8', 'dex': '14', 'con': '14', 'int': '10', 'wis': '12', 'cha': '18',
+                'spell-attr': 'cha', 'slot-1-m': '2', 'slot-2-m': '0', 'slot-3-m': '2',
+                spells: [{ prep: true, name: 'Eldritch Blast', level: '0', time: '1 Akt.', conc: false, notes: 'Magischer Strahl' },
+                         { prep: true, name: 'Hex (Hexenmal)', level: '1', time: '1 Bonus', conc: true, notes: '+1W6 Schaden' }],
+                weapons: [{ name: 'Leichter Stab +1', magic: '1', dice: '1W6' }],
+                potions: [{ type: 'Heiltrank (1W4+4)', count: '1' }]
+            };
+        } else if (user === 'test3') {
+            preset = {
+                id: newId, name: 'Boren der Stille', clazz: 'Mönch', subclass: 'Weg der Offenen Hand', level: '6',
+                'hp-curr': '52', 'hp-max': '52', 'hp-temp': '0', 'ac': '16', 'str': '10', 'dex': '18', 'con': '14', 'int': '10', 'wis': '16', 'cha': '8',
+                weapons: [{ name: 'Unbewaffneter Schlag', magic: '1', dice: '1W6' }],
+                potions: [{ type: 'Heiltrank (1W4+4)', count: '2' }]
+            };
+        } else if (user === 'test4') {
+            preset = {
+                id: newId, name: 'Sir Alden', clazz: 'Kämpfer', subclass: 'Meister des Kampfs (Battle Master)', level: '6',
+                'hp-curr': '60', 'hp-max': '60', 'hp-temp': '0', 'ac': '18', 'str': '18', 'dex': '10', 'con': '16', 'int': '10', 'wis': '12', 'cha': '10',
+                weapons: [{ name: 'Großschwert +1', magic: '1', dice: '2W6' }],
+                potions: [{ type: 'Großer Heiltrank (2W4+2)', count: '2' }]
+            };
+        }
+
+        if (preset) {
+            saveCharactersList([{ id: preset.id, name: preset.name, clazz: preset.clazz, subclass: preset.subclass, level: preset.level }]);
+            localStorage.setItem('dnd_sheet_data_' + user + '_' + preset.id, JSON.stringify(preset));
+            return preset.id;
+        }
+        return null;
+    }
+
+    function loadCharacterData(charId) {
+        updateSubclasses();
+        let saved = localStorage.getItem('dnd_sheet_data_' + currentUser + '_' + charId);
+        if (!saved) return;
+
+        let data = JSON.parse(saved);
+        Object.keys(data).forEach(id => {
+            let elem = document.getElementById(id);
+            if (elem) {
+                if (elem.type === 'checkbox') elem.checked = data[id];
+                else elem.value = data[id];
+            }
+        });
+
+        let btnToggle = document.getElementById('btn-toggle-rage');
+        if (data.isRaging && btnToggle) btnToggle.classList.add('active');
+        else if (btnToggle) btnToggle.classList.remove('active');
+
+        if (data.conditions) {
+            ['poisoned', 'stunned', 'prone', 'paralyzed'].forEach(cond => {
+                let btn = document.getElementById('cond-' + cond);
+                if (btn) btn.classList.toggle('active', !!data.conditions[cond]);
+            });
+        }
+
+        updateRageButtonText();
+        updateKiDisplay();
+        updateActionSurgeDisplay();
+        updateSecondWindDisplay();
+        updateWildformDisplay();
+
+        let spellsList = document.getElementById('spells-list');
+        if (spellsList) {
+            spellsList.innerHTML = '';
+            if (data.spells && data.spells.length > 0) {
+                data.spells.forEach(s => addSpell(s.prep, s.name, s.level, s.time, s.conc, s.notes));
             }
         }
 
-        let savedUser = localStorage.getItem('dnd_logged_user');
-        let savedRole = localStorage.getItem('dnd_logged_role');
-        if (savedUser && validAccounts.includes(savedUser) && savedRole) {
-            currentUser = savedUser;
-            currentRole = savedRole;
-            let loginOverlay = document.getElementById('login-overlay');
-            if (loginOverlay) loginOverlay.classList.add('hidden');
-            setupNavigation();
-            let userDisp = document.getElementById('user-display-name');
-            if (userDisp) userDisp.innerText = currentUser.toUpperCase() + (currentRole === 'dm' ? ' (DM)' : '');
-            initApp();
+        let weaponsList = document.getElementById('weapons-list');
+        if (weaponsList) {
+            weaponsList.innerHTML = '';
+            if (data.weapons && data.weapons.length > 0) {
+                data.weapons.forEach(w => addWeapon(w.name, w.magic, w.dice));
+            } else {
+                addWeapon('Waffe', 0, '1W8');
+            }
         }
-    </script>
-</body>
-</html>
+
+        let potionsContainer = document.getElementById('potions-container');
+        if (potionsContainer) {
+            potionsContainer.innerHTML = '';
+            if (data.potions && data.potions.length > 0) {
+                data.potions.forEach(p => addPotionSlot(p.type, p.count));
+            } else {
+                addPotionSlot('Heiltrank (1W4+4)', 1);
+            }
+        }
+
+        onClassChange();
+        updateAllCalculations();
+    }
+
+    function getMod(val) { return isNaN(val) ? 0 : Math.floor((val - 10) / 2); }
+
+    function formatValue(elementId, val) {
+        let elem = document.getElementById(elementId);
+        if (!elem) return;
+        elem.innerText = (val >= 0 ? "+" + val : val);
+        if (val > 0) elem.style.color = "var(--pos-color)";
+        else if (val < 0) elem.style.color = "var(--neg-color)";
+        else elem.style.color = "var(--text-muted)";
+    }
+
+    function updateAllCalculations() {
+        let pbEl = document.getElementById('pb');
+        let pb = pbEl ? (parseInt(pbEl.value) || 0) : 0;
+        formatValue('pb-display', pb);
+
+        let strEl = document.getElementById('str');
+        let dexEl = document.getElementById('dex');
+        let conEl = document.getElementById('con');
+        let intEl = document.getElementById('int');
+        let wisEl = document.getElementById('wis');
+        let chaEl = document.getElementById('cha');
+
+        let strMod = getMod(strEl ? parseInt(strEl.value) : 10);
+        let dexMod = getMod(dexEl ? parseInt(dexEl.value) : 10);
+        let conMod = getMod(conEl ? parseInt(conEl.value) : 10);
+        let intMod = getMod(intEl ? parseInt(intEl.value) : 10);
+        let wisMod = getMod(wisEl ? parseInt(wisEl.value) : 10);
+        let chaMod = getMod(chaEl ? parseInt(chaEl.value) : 10);
+
+        formatValue('str-mod', strMod);
+        formatValue('dex-mod', dexMod);
+        formatValue('con-mod', conMod);
+        formatValue('int-mod', intMod);
+        formatValue('wis-mod', wisMod);
+        formatValue('cha-mod', chaMod);
+
+        let autoAcToggle = document.getElementById('auto-ac-toggle');
+        if (autoAcToggle && autoAcToggle.checked) {
+            let cls = document.getElementById('char-class').value;
+            let calculatedAc = 10;
+            if (cls === "Barbar") calculatedAc = 10 + dexMod + conMod;
+            else if (cls === "Mönch") calculatedAc = 10 + dexMod + wisMod;
+            let acField = document.getElementById('ac');
+            if (acField) acField.value = calculatedAc;
+        }
+
+        let weaponRows = document.querySelectorAll('.weapon-row');
+        weaponRows.forEach(row => {
+            let magicElem = row.querySelector('.weapon-magic');
+            let magicVal = magicElem ? (parseInt(magicElem.value) || 0) : 0;
+            let totalAtk = strMod + pb + magicVal;
+            let atkDisplay = row.querySelector('.weapon-atk-calc');
+            if (atkDisplay) atkDisplay.innerText = (totalAtk >= 0 ? "+" + totalAtk : totalAtk);
+        });
+
+        let skillsMap = {
+            'save-str': strMod, 'skill-athletik': strMod,
+            'save-dex': dexMod, 'skill-akrobatik': dexMod, 'skill-fingerfertigkeit': dexMod, 'skill-heimlichkeit': dexMod,
+            'save-con': conMod,
+            'save-int': intMod, 'skill-arkanekunde': intMod, 'skill-geschichte': intMod,
+            'save-wis': wisMod, 'skill-wahrnehmung': wisMod,
+            'save-cha': chaMod, 'skill-einschuechtern': chaMod
+        };
+
+        Object.keys(skillsMap).forEach(id => {
+            let checkbox = document.getElementById(id);
+            let valElem = document.getElementById('val-' + id);
+            if (checkbox && valElem) {
+                let total = skillsMap[id] + (checkbox.checked ? pb : 0);
+                valElem.innerText = (total >= 0 ? "+" + total : total);
+                if (total > 0) valElem.style.color = "var(--pos-color)";
+                else if (total < 0) valElem.style.color = "var(--neg-color)";
+                else valElem.style.color = "var(--text-muted)";
+            }
+        });
+
+        let spellAttrEl = document.getElementById('spell-attr');
+        if (spellAttrEl) {
+            let spellAttr = spellAttrEl.value;
+            let spellMod = (spellAttr === 'int' ? intMod : (spellAttr === 'wis' ? wisMod : chaMod));
+            let dcDisp = document.getElementById('spell-dc-display');
+            if (dcDisp) dcDisp.innerText = 8 + pb + spellMod;
+            let spellAtk = pb + spellMod;
+            let atkDisp = document.getElementById('spell-atk-display');
+            if (atkDisp) atkDisp.innerText = (spellAtk >= 0 ? "+" + spellAtk : spellAtk);
+        }
+        autoScaleResources();
+    }
+
+    function toggleSpellNotes(btn) {
+        let wrapper = btn.closest('.spell-row-wrapper');
+        let notesContainer = wrapper.querySelector('.spell-notes-container');
+        notesContainer.classList.toggle('hidden');
+        btn.innerText = notesContainer.classList.contains('hidden') ? '▼' : '▲';
+    }
+
+    function addSpell(prep = false, name = '', level = '0', time = '1 Akt.', conc = false, notes = '') {
+        let list = document.getElementById('spells-list');
+        if (!list) return;
+        let wrapper = document.createElement('div');
+        wrapper.className = 'spell-row-wrapper';
+        wrapper.innerHTML = `
+            <div class="spell-row">
+                <input type="checkbox" class="spell-prep" ${prep ? 'checked' : ''} onchange="saveData()">
+                <input type="text" placeholder="Zauber Name" value="${name}" class="field-left spell-name" oninput="saveData()">
+                <select class="spell-level" onchange="saveData()">
+                    <option value="0" ${level==='0'?'selected':''}>Trick</option>
+                    <option value="1" ${level==='1'?'selected':''}>1. Grad</option>
+                    <option value="2" ${level==='2'?'selected':''}>2. Grad</option>
+                    <option value="3" ${level==='3'?'selected':''}>3. Grad</option>
+                    <option value="4" ${level==='4'?'selected':''}>4. Grad</option>
+                    <option value="5" ${level==='5'?'selected':''}>5. Grad</option>
+                </select>
+                <input type="text" placeholder="Zeit" value="${time}" class="spell-time" oninput="saveData()">
+                <input type="checkbox" class="spell-conc" ${conc ? 'checked' : ''} onchange="saveData()">
+                <button type="button" class="btn-rest" onclick="toggleSpellNotes(this)" title="Notizen" style="padding:4px; font-size:0.7rem;">▼</button>
+                <button type="button" class="btn-remove" onclick="this.closest('.spell-row-wrapper').remove(); saveData();">✕</button>
+            </div>
+            <div class="spell-notes-container ${notes ? '' : 'hidden'}">
+                <textarea placeholder="Zauber-Notizen & Effekte..." class="spell-notes" oninput="saveData()">${notes}</textarea>
+            </div>
+        `;
+        list.appendChild(wrapper);
+    }
+
+    function addWeapon(name = '', magic = 0, dice = '1W12') {
+        let list = document.getElementById('weapons-list');
+        if (!list) return;
+        let newRow = document.createElement('div');
+        newRow.className = 'weapon-row';
+        newRow.innerHTML = `
+            <input type="text" placeholder="Waffe" value="${name}" class="field-left weapon-name" oninput="saveData()">
+            <input type="number" placeholder="0" value="${magic}" class="weapon-magic" oninput="updateAllCalculations(); saveData();">
+            <input type="text" placeholder="1W12" value="${dice}" class="weapon-dice" oninput="saveData()">
+            <div class="calc-display weapon-atk-calc">+0</div>
+            <button type="button" class="btn-remove" onclick="this.parentElement.remove(); saveData();">✕</button>
+        `;
+        list.appendChild(newRow);
+        updateAllCalculations();
+    }
+
+    function addPotionSlot(selectedType = 'Heiltrank (1W4+4)', count = 1) {
+        let list = document.getElementById('potions-container');
+        if (!list) return;
+        let row = document.createElement('div');
+        row.className = 'char-select-card';
+        row.style.marginBottom = '6px';
+        row.style.padding = '8px';
+        row.innerHTML = `
+            <div style="flex-grow: 1; margin-right: 8px;">
+                <select class="potion-type" onchange="saveData()">
+                    <option value="Heiltrank (1W4+4)" ${selectedType==='Heiltrank (1W4+4)'?'selected':''}>🧪 Heiltrank (1W4+4)</option>
+                    <option value="Großer Heiltrank (2W4+2)" ${selectedType==='Großer Heiltrank (2W4+2)'?'selected':''}>🧪 Großer Heiltrank (2W4+2)</option>
+                    <option value="Überlegener Heiltrank (4W4+4)" ${selectedType==='Überlegener Heiltrank (4W4+4)'?'selected':''}>🧪 Überlegener Heiltrank (4W4+4)</option>
+                    <option value="Höchster Heiltrank (8W4+8)" ${selectedType==='Höchster Heiltrank (8W4+8)'?'selected':''}>🧪 Höchster Heiltrank (8W4+8)</option>
+                    <option value="Gegengift" ${selectedType==='Gegengift'?'selected':''}>🟢 Gegengift</option>
+                    <option value="Manatrank / Arkane Essenz" ${selectedType==='Manatrank / Arkane Essenz'?'selected':''}>🔵 Manatrank / Arkane Essenz</option>
+                    <option value="Custom Item" ${selectedType==='Custom Item'?'selected':''}>✨ Eigenes Item</option>
+                </select>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <button type="button" class="btn-rest" onclick="adjustPotionRow(this, -1)">-</button>
+                <input type="number" class="potion-count" value="${count}" oninput="saveData()" style="width: 45px; padding: 4px;">
+                <button type="button" class="btn-rest" onclick="adjustPotionRow(this, 1)">+</button>
+                <button type="button" class="btn-remove" onclick="this.closest('.char-select-card').remove(); saveData();" style="height:32px; width:32px;">✕</button>
+            </div>
+        `;
+        list.appendChild(row);
+    }
+
+    function adjustPotionRow(btn, amount) {
+        let input = btn.parentElement.querySelector('.potion-count');
+        let val = (parseInt(input.value) || 0) + amount;
+        input.value = Math.max(0, val);
+        saveData();
+    }
+
+    function saveData() {
+        if (!currentActiveCharId || !currentUser || currentRole === 'dm') return;
+        
+        let data = {};
+        document.querySelectorAll('#view-sheet input, #view-sheet select, #view-sheet textarea').forEach(elem => {
+            if (elem.id && !elem.closest('.spell-row-wrapper') && !elem.closest('.weapon-row') && !elem.closest('#potions-container')) {
+                data[elem.id] = (elem.type === 'checkbox') ? elem.checked : elem.value;
+            }
+        });
+
+        let btnToggle = document.getElementById('btn-toggle-rage');
+        data.isRaging = (btnToggle && btnToggle.classList.contains('active'));
+        let rCurr = document.getElementById('rage-curr');
+        let rMax = document.getElementById('rage-max');
+        let kiCurr = document.getElementById('ki-curr');
+        let sCurr = document.getElementById('surge-curr');
+        let wCurr = document.getElementById('wind-curr');
+        let wWild = document.getElementById('wildform-curr');
+
+        if (rCurr) data.rageCurr = rCurr.value;
+        if (rMax) data.rageMax = rMax.value;
+        if (kiCurr) data.kiCurr = kiCurr.value;
+        if (sCurr) data.surgeCurr = sCurr.value;
+        if (wCurr) data.windCurr = wCurr.value;
+        if (wWild) data.wildformCurr = wWild.value;
+
+        data.conditions = {
+            poisoned: document.getElementById('cond-poisoned').classList.contains('active'),
+            stunned: document.getElementById('cond-stunned').classList.contains('active'),
+            prone: document.getElementById('cond-prone').classList.contains('active'),
+            paralyzed: document.getElementById('cond-paralyzed').classList.contains('active')
+        };
+
+        let weapons = [];
+        document.querySelectorAll('.weapon-row').forEach(row => {
+            let wName = row.querySelector('.weapon-name');
+            let wMag = row.querySelector('.weapon-magic');
+            let wDice = row.querySelector('.weapon-dice');
+            weapons.push({
+                name: wName ? wName.value : '',
+                magic: wMag ? wMag.value : '0',
+                dice: wDice ? wDice.value : '1W8'
+            });
+        });
+        data.weapons = weapons;
+
+        let spells = [];
+        document.querySelectorAll('.spell-row-wrapper').forEach(wrapper => {
+            let sPrep = wrapper.querySelector('.spell-prep');
+            let sName = wrapper.querySelector('.spell-name');
+            let sLvl = wrapper.querySelector('.spell-level');
+            let sTime = wrapper.querySelector('.spell-time');
+            let sConc = wrapper.querySelector('.spell-conc');
+            let sNotes = wrapper.querySelector('.spell-notes');
+            spells.push({
+                prep: sPrep ? sPrep.checked : false,
+                name: sName ? sName.value : '',
+                level: sLvl ? sLvl.value : '0',
+                time: sTime ? sTime.value : '',
+                conc: sConc ? sConc.checked : false,
+                notes: sNotes ? sNotes.value : ''
+            });
+        });
+        data.spells = spells;
+
+        let potions = [];
+        document.querySelectorAll('#potions-container .char-select-card').forEach(card => {
+            let pType = card.querySelector('.potion-type');
+            let pCount = card.querySelector('.potion-count');
+            potions.push({
+                type: pType ? pType.value : '',
+                count: pCount ? pCount.value : '1'
+            });
+        });
+        data.potions = potions;
+
+        localStorage.setItem('dnd_sheet_data_' + currentUser + '_' + currentActiveCharId, JSON.stringify(data));
+
+        let chars = getCharactersList();
+        let cIndex = chars.findIndex(c => c.id === currentActiveCharId);
+        let nameEl = document.getElementById('char-name');
+        let classEl = document.getElementById('char-class');
+        let subEl = document.getElementById('char-subclass');
+        let lvlEl = document.getElementById('char-level');
+
+        let cName = nameEl ? nameEl.value : 'Helden-Charakter';
+        let cClass = classEl ? classEl.value : 'Abenteurer';
+        let cSub = subEl ? subEl.value : '';
+        let cLvl = lvlEl ? lvlEl.value : '1';
+
+        if (cIndex >= 0) {
+            chars[cIndex] = { id: currentActiveCharId, name: cName, clazz: cClass, subclass: cSub, level: cLvl };
+        } else {
+            chars.push({ id: currentActiveCharId, name: cName, clazz: cClass, subclass: cSub, level: cLvl });
+        }
+        saveCharactersList(chars);
+
+        let activeInRoomCharId = localStorage.getItem('dnd_room_active_char_' + currentUser + '_' + activeRoom);
+        if (activeInRoomCharId === currentActiveCharId) {
+            pushCharacterToCloud();
+        }
+    }
+
+    function initApp() {
+        let savedRoom = localStorage.getItem('dnd_active_room_' + currentUser);
+        if (savedRoom) {
+            activeRoom = savedRoom;
+            let joinInput = document.getElementById('join-room-input');
+            let dmInput = document.getElementById('dm-room-code-input');
+            if (joinInput) joinInput.value = activeRoom;
+            if (dmInput) dmInput.value = activeRoom;
+        }
+
+        if (currentRole === 'player') {
+            let chars = getCharactersList();
+            if (chars.length === 0) {
+                let presetId = loadDefaultPresetForUser(currentUser);
+                if (!presetId) {
+                    let defaultId = 'char_' + currentUser;
+                    chars.push({ id: defaultId, name: 'Held von ' + currentUser.toUpperCase(), clazz: 'Barbar', subclass: 'Pfad des Weltenbaums', level: '6' });
+                    saveCharactersList(chars);
+                }
+            }
+
+            chars = getCharactersList();
+            let lastChar = localStorage.getItem('dnd_active_char_' + currentUser) || (chars[0] ? chars[0].id : null);
+            if (!lastChar && chars.length > 0) lastChar = chars[0].id;
+            currentActiveCharId = lastChar;
+            initCloudSync();
+            switchMode('lobby');
+        } else {
+            initCloudSync();
+            switchMode('dm');
+        }
+    }
+
+    let savedUser = localStorage.getItem('dnd_logged_user');
+    let savedRole = localStorage.getItem('dnd_logged_role');
+    if (savedUser && validAccounts.includes(savedUser) && savedRole) {
+        currentUser = savedUser;
+        currentRole = savedRole;
+        let loginOverlay = document.getElementById('login-overlay');
+        if (loginOverlay) loginOverlay.classList.add('hidden');
+        setupNavigation();
+        let userDisp = document.getElementById('user-display-name');
+        if (userDisp) userDisp.innerText = currentUser.toUpperCase() + (currentRole === 'dm' ? ' (DM)' : '');
+        initApp();
+    }
+</script>
