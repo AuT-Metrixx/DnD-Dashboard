@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.5.5</title>
+    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.5.6</title>
     <!-- Firebase SDK (Cloud Live Sync) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -456,9 +456,10 @@
         .slot-inputs { display: flex; gap: 4px; margin-top: 2px; }
         .slot-inputs input { font-size: 0.85rem; padding: 4px; }
 
+        /* WAFFEN RASTER UPDATE */
         .weapon-header {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr 32px;
+            grid-template-columns: 1.8fr 0.8fr 1.3fr 1.1fr 1fr 32px;
             gap: 4px;
             font-size: 0.65rem;
             color: var(--text-muted);
@@ -469,12 +470,12 @@
         }
         .weapon-row {
             display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr 32px;
+            grid-template-columns: 1.8fr 0.8fr 1.3fr 1.1fr 1fr 32px;
             gap: 4px;
             margin-bottom: 6px;
             align-items: center;
         }
-        .weapon-row input { padding: 4px; font-size: 0.8rem; }
+        .weapon-row input, .weapon-row select { padding: 4px; font-size: 0.75rem; }
         .weapon-atk-calc {
             background: #11151d;
             border: 1px solid var(--border-color);
@@ -972,7 +973,7 @@
         <div class="section">
             <div class="section-title">Waffen & Angriffe</div>
             <div class="weapon-header">
-                <span>Waffe</span><span>Magie (+X)</span><span>Schaden</span><span>Bonus</span><span></span>
+                <span>Waffe</span><span>Magie (+X)</span><span>Schaden</span><span>Typ</span><span>Bonus</span><span></span>
             </div>
             <div id="weapons-list"></div>
             <button type="button" class="btn-add" onclick="addWeapon(); saveData();">+ Waffe hinzufügen</button>
@@ -1056,19 +1057,19 @@
         </div>
     </div>
 
-    <div class="version-badge" onclick="openChangelogModal()">v0.5.5 Skill Calc Fix</div>
+    <div class="version-badge" onclick="openChangelogModal()">v0.5.6 Damage Type Added</div>
 
     <div id="changelog-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Version 0.5.5 - Changelog</h2>
+                <h2>Version 0.5.6 - Changelog</h2>
                 <button type="button" class="modal-close" onclick="closeChangelogModal()">✕</button>
             </div>
             <div class="changelog-item">
-                <h4>✨ Automatischer Fertigkeiten-Fix</h4>
+                <h4>🗡️ Schadenstypen für Waffen</h4>
                 <ul>
-                    <li>Alle Rettungswürfe und Fertigkeiten besitzen nun eindeutige IDs.</li>
-                    <li>Änderungen an Attributen oder dem Übungsbonus aktualisieren alle Werte sofort fehlerfrei.</li>
+                    <li>Auswahlfeld für den Schadenstyp hinzugefügt (Stich, Hieb, Wucht, Feuer, Kälte, etc.).</li>
+                    <li>Waffen-Raster erweitert für noch bessere Übersicht im Kampf.</li>
                 </ul>
             </div>
         </div>
@@ -2023,7 +2024,7 @@
                     'hp-curr': '59', 'hp-max': '59', 'hp-temp': '0', 'ac': '15', 'speed': '12m', 'passive-perception': '13',
                     'str': '16', 'dex': '14', 'con': '16', 'int': '8', 'wis': '10', 'cha': '10',
                     'save-str': true, 'con': '16', 'save-con': true, 'skill-athletics': true,
-                    weapons: [{ name: 'Großaxt +1', magic: '1', dice: '1W12' }],
+                    weapons: [{ name: 'Speer', magic: '1', dice: '1W8 / 1W10', type: 'Stich' }, { name: 'Zweihandaxt', magic: '0', dice: '1W12', type: 'Hieb' }],
                     potions: [{ type: 'Heiltrank (1W4+4)', count: '2' }]
                 };
             } else if (user === 'test2') {
@@ -2034,7 +2035,7 @@
                     'spell-attr': 'cha',
                     spells: [{ prep: true, name: 'Eldritch Blast', level: '0', time: '1 Akt.', conc: false, notes: 'Magischer Strahl' },
                              { prep: true, name: 'Hex (Hexenmal)', level: '1', time: '1 Bonus', conc: true, notes: '+1W6 Schaden' }],
-                    weapons: [{ name: 'Leichter Stab +1', magic: '1', dice: '1W6' }],
+                    weapons: [{ name: 'Leichter Stab +1', magic: '1', dice: '1W6', type: 'Wucht' }],
                     potions: [{ type: 'Heiltrank (1W4+4)', count: '1' }]
                 };
             } else if (user === 'test3') {
@@ -2042,7 +2043,7 @@
                     id: newId, name: 'Boren der Stille', clazz: 'Mönch', subclass: 'Weg der Offenen Hand', level: '6',
                     'hp-curr': '52', 'hp-max': '52', 'hp-temp': '0', 'ac': '16', 'speed': '13.5m', 'passive-perception': '16',
                     'str': '10', 'dex': '18', 'con': '14', 'int': '10', 'wis': '16', 'cha': '8',
-                    weapons: [{ name: 'Unbewaffneter Schlag', magic: '1', dice: '1W6' }],
+                    weapons: [{ name: 'Unbewaffneter Schlag', magic: '1', dice: '1W6', type: 'Wucht' }],
                     potions: [{ type: 'Heiltrank (1W4+4)', count: '2' }]
                 };
             } else if (user === 'test4') {
@@ -2050,7 +2051,7 @@
                     id: newId, name: 'Sir Alden', clazz: 'Kämpfer', subclass: 'Meister des Kampfs (Battle Master)', level: '6',
                     'hp-curr': '60', 'hp-max': '60', 'hp-temp': '0', 'ac': '18', 'speed': '9m', 'passive-perception': '14',
                     'str': '18', 'dex': '10', 'con': '16', 'int': '10', 'wis': '12', 'cha': '10',
-                    weapons: [{ name: 'Großschwert +1', magic: '1', dice: '2W6' }],
+                    weapons: [{ name: 'Großschwert +1', magic: '1', dice: '2W6', type: 'Hieb' }],
                     potions: [{ type: 'Großer Heiltrank (2W4+2)', count: '2' }]
                 };
             }
@@ -2106,7 +2107,7 @@
             if (weaponsList) {
                 weaponsList.innerHTML = '';
                 if (data.weapons && data.weapons.length > 0) {
-                    data.weapons.forEach(w => addWeapon(w.name, w.magic, w.dice));
+                    data.weapons.forEach(w => addWeapon(w.name, w.magic, w.dice, w.type));
                 }
             }
 
@@ -2209,7 +2210,7 @@
             weaponRows.forEach(row => {
                 let magicElem = row.querySelector('.weapon-magic');
                 let magicVal = magicElem ? (parseInt(magicElem.value) || 0) : 0;
-                let totalAtk = strMod + magicVal;
+                let totalAtk = strMod + pb + magicVal;
                 let atkDisplay = row.querySelector('.weapon-atk-calc');
                 if (atkDisplay) atkDisplay.innerText = (totalAtk >= 0 ? "+" + totalAtk : totalAtk);
             });
@@ -2263,7 +2264,7 @@
             list.appendChild(wrapper);
         }
 
-        function addWeapon(name = '', magic = 0, dice = '1W8') {
+        function addWeapon(name = '', magic = 0, dice = '1W8', type = 'Stich') {
             let list = document.getElementById('weapons-list');
             if (!list) return;
             let newRow = document.createElement('div');
@@ -2272,6 +2273,19 @@
                 <input type="text" placeholder="Waffe" value="${name}" class="weapon-name" oninput="saveData()">
                 <input type="number" placeholder="0" value="${magic}" class="weapon-magic" oninput="updateAllCalculations(); saveData();">
                 <input type="text" placeholder="1W8" value="${dice}" class="weapon-dice" oninput="saveData()">
+                <select class="weapon-type" onchange="saveData()">
+                    <option value="Stich" ${type==='Stich'?'selected':''}>Stich</option>
+                    <option value="Hieb" ${type==='Hieb'?'selected':''}>Hieb</option>
+                    <option value="Wucht" ${type==='Wucht'?'selected':''}>Wucht</option>
+                    <option value="Feuer" ${type==='Feuer'?'selected':''}>Feuer</option>
+                    <option value="Kälte" ${type==='Kälte'?'selected':''}>Kälte</option>
+                    <option value="Blitz" ${type==='Blitz'?'selected':''}>Blitz</option>
+                    <option value="Säure" ${type==='Säure'?'selected':''}>Säure</option>
+                    <option value="Nekrotisch" ${type==='Nekrotisch'?'selected':''}>Nekro.</option>
+                    <option value="Gleißend" ${type==='Gleißend'?'selected':''}>Gleiß.</option>
+                    <option value="Gift" ${type==='Gift'?'selected':''}>Gift</option>
+                    <option value="Magisch" ${type==='Magisch'?'selected':''}>Magisch</option>
+                </select>
                 <div class="calc-display weapon-atk-calc">+0</div>
                 <button type="button" class="btn-remove" onclick="this.parentElement.remove(); saveData();">✕</button>
             `;
@@ -2343,10 +2357,12 @@
                 let wName = row.querySelector('.weapon-name');
                 let wMag = row.querySelector('.weapon-magic');
                 let wDice = row.querySelector('.weapon-dice');
+                let wType = row.querySelector('.weapon-type');
                 weapons.push({
                     name: wName ? wName.value : '',
                     magic: wMag ? wMag.value : '0',
-                    dice: wDice ? wDice.value : '1W8'
+                    dice: wDice ? wDice.value : '1W8',
+                    type: wType ? wType.value : 'Stich'
                 });
             });
             data.weapons = weapons;
