@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.5.2</title>
+    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.5.4</title>
     <!-- Firebase SDK (Cloud Live Sync) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -540,10 +540,10 @@
         }
         .party-info h3 { margin: 0 0 2px 0; font-size: 0.95rem; color: var(--accent); }
         .party-info p { margin: 0; font-size: 0.75rem; color: var(--text-muted); }
-        .party-stats { display: flex; gap: 8px; text-align: center; flex-wrap: wrap; justify-content: flex-end; }
+        .party-stats { display: flex; gap: 6px; text-align: center; flex-wrap: wrap; justify-content: flex-end; }
         .party-stat-box { background: #161a22; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--border-color); }
-        .party-stat-box label { font-size: 0.6rem; margin: 0; }
-        .party-stat-box span { font-size: 0.85rem; font-weight: bold; }
+        .party-stat-box label { font-size: 0.55rem; margin: 0; }
+        .party-stat-box span { font-size: 0.8rem; font-weight: bold; }
 
         .dm-status-badges {
             display: flex;
@@ -569,6 +569,17 @@
             padding: 6px;
             border-radius: 6px;
             border: 1px dashed var(--border-color);
+        }
+        .dm-note-box details summary {
+            font-size: 0.7rem;
+            color: var(--warning-color);
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            user-select: none;
+        }
+        .dm-note-box details summary:hover {
+            color: #fde047;
         }
 
         .btn-add {
@@ -1045,19 +1056,19 @@
         </div>
     </div>
 
-    <div class="version-badge" onclick="openChangelogModal()">v0.5.2 Speed & Perception</div>
+    <div class="version-badge" onclick="openChangelogModal()">v0.5.4 DM Textarea Notes</div>
 
     <div id="changelog-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Version 0.5.2 - Changelog</h2>
+                <h2>Version 0.5.4 - Changelog</h2>
                 <button type="button" class="modal-close" onclick="closeChangelogModal()">✕</button>
             </div>
             <div class="changelog-item">
-                <h4>🏃 Tempo & 👁️ Passive Wahrnehmung</h4>
+                <h4>👑 Erweiterte DM-Notizen</h4>
                 <ul>
-                    <li>Felder für Charakter-Geschwindigkeit (z. B. 9m) und passive Wahrnehmung hinzugefügt.</li>
-                    <li>Werte werden live synchronisiert und sind für den DM in der Übersicht sichtbar.</li>
+                    <li>Geheime DM-Notizen wurden von einer einzeiligen Zeile in ein ausklappbares Textarea-Menü (Dropdown) umgewandelt.</li>
+                    <li>Erlaubt nun mehrzeilige und ausführlichere Notizen pro Charakter.</li>
                 </ul>
             </div>
         </div>
@@ -1845,7 +1856,7 @@
                                 <div class="party-stat-box"><label>HP</label><span style="color: ${hpColor};">${hpCurr}/${hpMax}</span></div>
                                 <div class="party-stat-box"><label>AC</label><span>${ac}</span></div>
                                 <div class="party-stat-box"><label>Tempo</label><span>${speed}</span></div>
-                                <div class="party-stat-box"><label>Pass.Wahrn</label><span>${pp}</span></div>
+                                <div class="party-stat-box"><label>Pass.W</label><span>${pp}</span></div>
                             </div>
                         </div>
                     </div>
@@ -1869,8 +1880,10 @@
                         </div>
                         ${badgesHTML ? `<div class="dm-status-badges">${badgesHTML}</div>` : ''}
                         <div class="dm-note-box">
-                            <label style="text-align: left; font-size: 0.65rem; color: var(--warning-color);">👑 Geheime DM-Notiz:</label>
-                            <input type="text" placeholder="Nur für Spielleiter..." value="${dmNoteVal}" onchange="saveDMSecetNote('${charKey}', this.value)" style="font-size: 0.75rem; padding: 4px; text-align: left;">
+                            <details>
+                                <summary>👑 Geheime DM-Notiz bearbeiten...</summary>
+                                <textarea placeholder="Ausführliche DM-Notizen, Plots & Secrets..." rows="3" onchange="saveDMSecetNote('${charKey}', this.value)" style="font-size: 0.75rem; padding: 6px; text-align: left; margin-top: 6px; resize: vertical;">${dmNoteVal}</textarea>
+                            </details>
                         </div>
                     </div>
                 `;
