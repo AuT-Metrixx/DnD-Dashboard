@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.5.0</title>
+    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.5.2</title>
     <!-- Firebase SDK (Cloud Live Sync) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -540,7 +540,7 @@
         }
         .party-info h3 { margin: 0 0 2px 0; font-size: 0.95rem; color: var(--accent); }
         .party-info p { margin: 0; font-size: 0.75rem; color: var(--text-muted); }
-        .party-stats { display: flex; gap: 8px; text-align: center; }
+        .party-stats { display: flex; gap: 8px; text-align: center; flex-wrap: wrap; justify-content: flex-end; }
         .party-stat-box { background: #161a22; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--border-color); }
         .party-stat-box label { font-size: 0.6rem; margin: 0; }
         .party-stat-box span { font-size: 0.85rem; font-weight: bold; }
@@ -716,13 +716,14 @@
         <div class="grid-2" style="gap: 6px; margin-bottom: 12px;">
             <div class="field-left">
                 <label>Vom DM erhaltener Raum-Code</label>
-                <input type="text" id="join-room-input" value="zarthul-gruppe" placeholder="z.B. dnd-runde">
+                <input type="text" id="join-room-input" value="" placeholder="z.B. dnd-runde">
             </div>
-            <div style="display: flex; align-items: flex-end;">
-                <button type="button" class="btn-main" style="margin: 0; height: 41px;" onclick="joinRoom()">Raum beitreten</button>
+            <div style="display: flex; align-items: flex-end; gap: 4px;">
+                <button type="button" class="btn-main" style="margin: 0; height: 41px;" onclick="joinRoom()">Beitreten</button>
+                <button type="button" class="btn-rest" style="height: 41px; background: #1e1518; border-color: #422026; color: var(--neg-color); font-weight: bold; font-size: 0.7rem;" onclick="leaveRoom()" title="Aktuellen Raum verlassen">Verlassen</button>
             </div>
         </div>
-        <div id="sync-status" style="font-size: 0.8rem; color: var(--pos-color); padding: 8px; text-align: center; background: #11151d; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 12px;">Verbunden mit Lobby</div>
+        <div id="sync-status" style="font-size: 0.8rem; color: var(--text-muted); padding: 8px; text-align: center; background: #11151d; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 12px;">Kein Raum verbunden</div>
 
         <div class="section-title">Deine Helden-Charaktere</div>
         <div id="character-list-container"></div>
@@ -846,9 +847,11 @@
                 <div class="stat-box"><label>Temp HP</label><input type="number" id="hp-temp" value="0" oninput="saveData()"></div>
                 <div class="stat-box"><label>Rüstung (AC)</label><input type="number" id="ac" value="15" oninput="updateAllCalculations(); saveData();"></div>
             </div>
-            <div class="grid-2" style="margin-bottom: 10px;">
+            <div class="grid-4" style="margin-bottom: 10px;">
                 <div class="stat-box"><label>Übungsbonus (PB)</label><input type="number" id="pb" value="3" oninput="updateAllCalculations(); saveData();"></div>
                 <div class="stat-box"><label>Initiative</label><input type="number" id="init" value="2" oninput="saveData()"></div>
+                <div class="stat-box"><label>Tempo (Geschw.)</label><input type="text" id="speed" value="9m / 30ft" oninput="saveData()" style="text-align:center;"></div>
+                <div class="stat-box"><label>Passive Wahrn.</label><input type="number" id="passive-perception" value="10" oninput="saveData()"></div>
             </div>
 
             <div style="background: #11151d; padding: 8px; border-radius: 8px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -1021,15 +1024,16 @@
         <div class="field-left" style="margin-bottom: 8px;">
             <label>Aktiver DM Raum-Code für die Gruppe</label>
             <div style="display: flex; gap: 6px;">
-                <input type="text" id="dm-room-code-input" value="zarthul-gruppe" placeholder="Raum-Code..." style="flex-grow: 1;">
-                <button type="button" class="btn-main" style="margin:0; width: auto; padding: 0 14px;" onclick="confirmDMRoom()">Raum wechseln</button>
+                <input type="text" id="dm-room-code-input" value="" placeholder="Raum-Code eingeben..." style="flex-grow: 1;">
+                <button type="button" class="btn-main" style="margin:0; width: auto; padding: 0 14px;" onclick="confirmDMRoom()">Raum setzen</button>
+                <button type="button" class="btn-rest" style="background: #1e1518; border-color: #422026; color: var(--neg-color); font-weight: bold; padding: 0 10px;" onclick="leaveDMRoom()">Verlassen</button>
             </div>
         </div>
-        <div id="dm-debug-box" style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 12px; background: #11151d; padding: 6px; border-radius: 6px;">Status: Bereit</div>
+        <div id="dm-debug-box" style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 12px; background: #11151d; padding: 6px; border-radius: 6px;">Status: Kein Raum aktiv</div>
 
         <div class="section-title">Aktive Helden der Party im Raum</div>
         <div id="dm-list-container">
-            <div style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 0.85rem;">Keine aktiven Helden im Raum gefunden.</div>
+            <div style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 0.85rem;">Kein Raum verbunden.</div>
         </div>
     </div>
 
@@ -1037,30 +1041,23 @@
     <div id="view-party" class="section hidden">
         <div class="section-title">Party Gruppen-Übersicht (Live Sync)</div>
         <div id="party-list-container">
-            <div style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 0.85rem;">Verbinde mit Raum...</div>
+            <div style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 0.85rem;">Kein Raum verbunden.</div>
         </div>
     </div>
 
-    <div class="version-badge" onclick="openChangelogModal()">v0.5.0 Multi-Acc</div>
+    <div class="version-badge" onclick="openChangelogModal()">v0.5.2 Speed & Perception</div>
 
     <div id="changelog-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Version 0.5.0 - Changelog</h2>
+                <h2>Version 0.5.2 - Changelog</h2>
                 <button type="button" class="modal-close" onclick="closeChangelogModal()">✕</button>
             </div>
             <div class="changelog-item">
-                <h4>🔑 Dynamische Account-Erstellung</h4>
+                <h4>🏃 Tempo & 👁️ Passive Wahrnehmung</h4>
                 <ul>
-                    <li>Neu erstellbare Accounts mit Namens- und Passwortprüfung (mindestens 8 Zeichen).</li>
-                    <li>Vollständige Cloud-Registrierung über Firebase (mit lokalem Fallback).</li>
-                    <li>Leere Start-Charaktere für neu registrierte Benutzer.</li>
-                </ul>
-            </div>
-            <div class="changelog-item">
-                <h4>⚔️ Korrigierte Waffen-Formel</h4>
-                <ul>
-                    <li>Angriffs-Bonus von nicht-magischen Waffen korrigiert (Übungsbonus aus dem festen Angriffsmodifikator entfernt).</li>
+                    <li>Felder für Charakter-Geschwindigkeit (z. B. 9m) und passive Wahrnehmung hinzugefügt.</li>
+                    <li>Werte werden live synchronisiert und sind für den DM in der Übersicht sichtbar.</li>
                 </ul>
             </div>
         </div>
@@ -1074,11 +1071,12 @@
         let db = null;
         let isCloudActive = false;
         let currentActiveCharId = null;
-        let activeRoom = "zarthul-gruppe";
+        let activeRoom = null;
         let currentUser = null;
         let currentRole = null;
         let currentAuthMode = 'login';
         let mySessionId = 'session_' + Math.random().toString(36).substring(2, 9);
+        let activeRoomListener = null;
 
         const defaultTestAccounts = {
             "admin": "0000",
@@ -1259,12 +1257,38 @@
             if (!codeInput) return;
             let code = codeInput.value.trim().toLowerCase();
             if (!code) { alert("Bitte gib einen gültigen Raum-Code ein!"); return; }
+            
             activeRoom = code;
             localStorage.setItem('dnd_active_room_' + currentUser, code);
             initCloudSync();
-            saveData();
             renderCharacterList();
             alert("Erfolgreich dem Raum '" + code + "' beigetreten!");
+        }
+
+        function leaveRoom() {
+            if (!activeRoom) { alert("Du bist aktuell in keinem Raum."); return; }
+            if (!confirm(`Möchtest du den Raum '${activeRoom}' wirklich verlassen?`)) return;
+
+            let activeInRoomCharId = localStorage.getItem('dnd_room_active_char_' + currentUser + '_' + activeRoom);
+            if (activeInRoomCharId) {
+                removeCharacterFromCloud(activeInRoomCharId);
+                localStorage.removeItem('dnd_room_active_char_' + currentUser + '_' + activeRoom);
+            }
+
+            if (activeRoomListener && isCloudActive && db) {
+                db.ref('rooms/' + activeRoom).off('value', activeRoomListener);
+                activeRoomListener = null;
+            }
+
+            activeRoom = null;
+            localStorage.removeItem('dnd_active_room_' + currentUser);
+            
+            let joinInput = document.getElementById('join-room-input');
+            if (joinInput) joinInput.value = '';
+
+            updateRoomStatusUI();
+            renderCharacterList();
+            alert("Du hast den Raum verlassen.");
         }
 
         function confirmDMRoom() {
@@ -1279,12 +1303,53 @@
             if (joinInput) joinInput.value = activeRoom;
             
             initCloudSync();
-            alert("👑 DM-Raum aktiv gewechselt zu: " + activeRoom);
+            alert("👑 DM-Raum aktiv gesetzt zu: " + activeRoom);
+        }
+
+        function leaveDMRoom() {
+            if (!activeRoom) { alert("Es ist kein DM-Raum aktiv."); return; }
+            if (!confirm(`Möchtest du den DM-Raum '${activeRoom}' verlassen?`)) return;
+
+            if (activeRoomListener && isCloudActive && db) {
+                db.ref('rooms/' + activeRoom).off('value', activeRoomListener);
+                activeRoomListener = null;
+            }
+
+            activeRoom = null;
+            localStorage.removeItem('dnd_active_room_' + currentUser);
+            let dmInput = document.getElementById('dm-room-code-input');
+            if (dmInput) dmInput.value = '';
+
+            updateRoomStatusUI();
+            alert("DM-Raum verlassen.");
+        }
+
+        function updateRoomStatusUI() {
+            let statusElem = document.getElementById('sync-status');
+            let debugBox = document.getElementById('dm-debug-box');
+            let partyContainer = document.getElementById('party-list-container');
+            let dmContainer = document.getElementById('dm-list-container');
+
+            if (!activeRoom) {
+                if (statusElem) {
+                    statusElem.innerText = "Kein Raum verbunden";
+                    statusElem.style.color = "var(--text-muted)";
+                }
+                if (debugBox) debugBox.innerText = "Status: Kein Raum aktiv";
+                if (partyContainer) partyContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 0.85rem;">Kein Raum verbunden. Trete in der Lobby einem Raum bei.</div>';
+                if (dmContainer) dmContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 0.85rem;">Kein Raum verbunden. Setze oben einen DM-Raum.</div>';
+            } else {
+                if (statusElem) {
+                    statusElem.innerText = "Verbunden mit Raum: " + activeRoom + " (⚡)";
+                    statusElem.style.color = "var(--pos-color)";
+                }
+                if (debugBox) debugBox.innerText = `Verbunden mit Raum: ${activeRoom}. Lausche auf Firebase...`;
+            }
         }
 
         function dmKickCharacter(charKey) {
             if (!confirm("Möchtest du diesen Charakter wirklich aus dem Raum werfen?")) return;
-            if (!isCloudActive || !db) return;
+            if (!isCloudActive || !db || !activeRoom) return;
             db.ref('rooms/' + activeRoom + '/characters/' + charKey).remove().then(() => {
                 alert("Charakter erfolgreich aus dem Raum entfernt.");
             });
@@ -1608,9 +1673,6 @@
         }
 
         function initCloudSync() {
-            let statusElem = document.getElementById('sync-status');
-            let debugBox = document.getElementById('dm-debug-box');
-
             if (!firebase.apps.length) {
                 try {
                     firebase.initializeApp(firebaseConfig);
@@ -1620,28 +1682,34 @@
             }
 
             if (isCloudActive && db) {
-                if (statusElem) {
-                    statusElem.innerText = "Verbunden mit Raum: " + activeRoom + " (⚡)";
+                if (!activeRoom) {
+                    updateRoomStatusUI();
+                    return;
                 }
-                if (debugBox) debugBox.innerText = `Verbunden mit Raum: ${activeRoom}. Lausche auf Firebase...`;
-                
-                db.ref('rooms/' + activeRoom).on('value', (snapshot) => {
+
+                if (activeRoomListener) {
+                    db.ref('rooms/' + activeRoom).off('value', activeRoomListener);
+                }
+
+                updateRoomStatusUI();
+
+                activeRoomListener = db.ref('rooms/' + activeRoom).on('value', (snapshot) => {
                     let data = snapshot.val();
                     renderPartyViews(data);
                     if (currentRole === 'player') renderCharacterList();
                 }, (error) => {
+                    let debugBox = document.getElementById('dm-debug-box');
                     if (debugBox) debugBox.innerText = `Firebase Fehler: ${error.message}`;
                 });
 
                 if (currentUser) registerSingleSession();
             } else {
-                if (statusElem) statusElem.innerText = "Lokal Modus (Keine Cloud)";
-                if (debugBox) debugBox.innerText = "Cloud inaktiv (Lokal Modus).";
+                updateRoomStatusUI();
             }
         }
 
         function pushCharacterToCloud() {
-            if (!isCloudActive || !db || !currentActiveCharId || currentRole === 'dm') return;
+            if (!isCloudActive || !db || !currentActiveCharId || currentRole === 'dm' || !activeRoom) return;
 
             let activeConcentration = '';
             document.querySelectorAll('.spell-row').forEach(row => {
@@ -1677,6 +1745,8 @@
                 hpMax: document.getElementById('hp-max').value || '0',
                 hpTemp: document.getElementById('hp-temp').value || '0',
                 ac: document.getElementById('ac').value || '10',
+                speed: document.getElementById('speed').value || '9m',
+                passivePerception: document.getElementById('passive-perception').value || '10',
                 lastUpdate: Date.now()
             };
 
@@ -1684,11 +1754,17 @@
         }
 
         function removeCharacterFromCloud(charId) {
-            if (!isCloudActive || !db) return;
+            if (!isCloudActive || !db || !activeRoom) return;
             db.ref('rooms/' + activeRoom + '/characters/' + currentUser + '_' + charId).remove();
         }
 
         function onSliderToggle(charId, checkbox) {
+            if (!activeRoom && checkbox.checked) {
+                alert("Du musst zuerst einem Raum beitreten, bevor du deinen Charakter in den Raum schicken kannst!");
+                checkbox.checked = false;
+                return;
+            }
+
             let activeInRoomCharId = localStorage.getItem('dnd_room_active_char_' + currentUser + '_' + activeRoom);
 
             if (!checkbox.checked) {
@@ -1704,7 +1780,7 @@
         }
 
         function saveDMSecetNote(charKey, noteVal) {
-            if (!isCloudActive || !db) return;
+            if (!isCloudActive || !db || !activeRoom) return;
             db.ref('rooms/' + activeRoom + '/characters/' + charKey).update({ dmNote: noteVal });
         }
 
@@ -1712,9 +1788,15 @@
             let partyContainer = document.getElementById('party-list-container');
             let dmContainer = document.getElementById('dm-list-container');
 
+            if (!activeRoom) {
+                if (partyContainer) partyContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 0.85rem;">Kein Raum verbunden.</div>';
+                if (dmContainer) dmContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 0.85rem;">Kein Raum verbunden.</div>';
+                return;
+            }
+
             if (!data || !data.characters || Object.keys(data.characters).length === 0) {
                 if (partyContainer) partyContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 15px;">Keine Charaktere im Raum.</div>';
-                if (dmContainer) dmContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 15px;">Keine Helden aktiv.</div>';
+                if (dmContainer) dmContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 15px;">Keine Helden im Raum aktiv.</div>';
                 return;
             }
 
@@ -1731,6 +1813,8 @@
                 let hpCurr = c.hpCurr !== undefined ? parseInt(c.hpCurr) : 0;
                 let hpMax = c.hpMax !== undefined ? parseInt(c.hpMax) : 1;
                 let ac = c.ac !== undefined ? c.ac : '10';
+                let speed = c.speed || '9m';
+                let pp = c.passivePerception || '10';
 
                 let hpPercent = Math.max(0, Math.min(100, (hpCurr / Math.max(1, hpMax)) * 100));
                 let hpColor = 'var(--pos-color)';
@@ -1760,6 +1844,8 @@
                             <div class="party-stats">
                                 <div class="party-stat-box"><label>HP</label><span style="color: ${hpColor};">${hpCurr}/${hpMax}</span></div>
                                 <div class="party-stat-box"><label>AC</label><span>${ac}</span></div>
+                                <div class="party-stat-box"><label>Tempo</label><span>${speed}</span></div>
+                                <div class="party-stat-box"><label>Pass.Wahrn</label><span>${pp}</span></div>
                             </div>
                         </div>
                     </div>
@@ -1776,6 +1862,8 @@
                             <div class="party-stats">
                                 <div class="party-stat-box"><label>HP</label><span style="color: ${hpColor};">${hpCurr}/${hpMax}</span></div>
                                 <div class="party-stat-box"><label>RK</label><span>${ac}</span></div>
+                                <div class="party-stat-box"><label>Tempo</label><span>${speed}</span></div>
+                                <div class="party-stat-box"><label>Pass.W</label><span>${pp}</span></div>
                                 <button type="button" class="btn-remove" onclick="dmKickCharacter('${charKey}')" title="Aus Raum kicken" style="margin-left: 6px; width: 28px;">✕</button>
                             </div>
                         </div>
@@ -1788,8 +1876,8 @@
                 `;
             });
 
-            if (partyContainer) partyContainer.innerHTML = partyHTML || '<div style="text-align: center; color: var(--text-muted); padding: 15px;">Keine Charaktere im Raum.</div>';
-            if (dmContainer) dmContainer.innerHTML = dmHTML || '<div style="text-align: center; color: var(--text-muted); padding: 15px;">Keine Helden aktiv.</div>';
+            if (partyContainer) partyContainer.innerHTML = partyHTML;
+            if (dmContainer) dmContainer.innerHTML = dmHTML;
         }
 
         function switchMode(mode) {
@@ -1841,7 +1929,7 @@
         function renderCharacterList() {
             let chars = getCharactersList();
             let container = document.getElementById('character-list-container');
-            let activeInRoomCharId = localStorage.getItem('dnd_room_active_char_' + currentUser + '_' + activeRoom);
+            let activeInRoomCharId = activeRoom ? localStorage.getItem('dnd_room_active_char_' + currentUser + '_' + activeRoom) : null;
 
             let userDisplayName = document.getElementById('user-display-name');
             if (userDisplayName && currentUser) userDisplayName.innerText = currentUser.toUpperCase();
@@ -1887,18 +1975,21 @@
 
             currentActiveCharId = newId;
             localStorage.setItem('dnd_active_char_' + currentUser, newId);
-            localStorage.setItem('dnd_room_active_char_' + currentUser + '_' + activeRoom, newId);
+            if (activeRoom) {
+                localStorage.setItem('dnd_room_active_char_' + currentUser + '_' + activeRoom, newId);
+            }
 
             let emptySheetData = {
                 id: newId, name: 'Neuer Held', clazz: 'Kämpfer', subclass: 'Champion', level: '1',
                 'hp-curr': '10', 'hp-max': '10', 'hp-temp': '0', 'ac': '10', 'pb': '2', 'init': '0',
+                'speed': '9m', 'passive-perception': '10',
                 'str': '10', 'dex': '10', 'con': '10', 'int': '10', 'wis': '10', 'cha': '10',
                 weapons: [], potions: []
             };
             localStorage.setItem('dnd_sheet_data_' + currentUser + '_' + newId, JSON.stringify(emptySheetData));
 
             loadCharacterData(newId);
-            pushCharacterToCloud();
+            if (activeRoom) pushCharacterToCloud();
             switchMode('sheet');
         }
 
@@ -1916,14 +2007,16 @@
             if (user === 'test1') {
                 preset = {
                     id: newId, name: 'Zar´thul Rocgarn', clazz: 'Barbar', subclass: 'Pfad des Weltenbaums', level: '6',
-                    'hp-curr': '59', 'hp-max': '59', 'hp-temp': '0', 'ac': '15', 'str': '16', 'dex': '14', 'con': '16', 'int': '8', 'wis': '10', 'cha': '10',
+                    'hp-curr': '59', 'hp-max': '59', 'hp-temp': '0', 'ac': '15', 'speed': '12m', 'passive-perception': '13',
+                    'str': '16', 'dex': '14', 'con': '16', 'int': '8', 'wis': '10', 'cha': '10',
                     weapons: [{ name: 'Großaxt +1', magic: '1', dice: '1W12' }],
                     potions: [{ type: 'Heiltrank (1W4+4)', count: '2' }]
                 };
             } else if (user === 'test2') {
                 preset = {
                     id: newId, name: 'Malakor der Paktgebundene', clazz: 'Hexenmeister', subclass: 'Der Unterweltler', level: '6',
-                    'hp-curr': '45', 'hp-max': '45', 'hp-temp': '0', 'ac': '14', 'str': '8', 'dex': '14', 'con': '14', 'int': '10', 'wis': '12', 'cha': '18',
+                    'hp-curr': '45', 'hp-max': '45', 'hp-temp': '0', 'ac': '14', 'speed': '9m', 'passive-perception': '11',
+                    'str': '8', 'dex': '14', 'con': '14', 'int': '10', 'wis': '12', 'cha': '18',
                     'spell-attr': 'cha',
                     spells: [{ prep: true, name: 'Eldritch Blast', level: '0', time: '1 Akt.', conc: false, notes: 'Magischer Strahl' },
                              { prep: true, name: 'Hex (Hexenmal)', level: '1', time: '1 Bonus', conc: true, notes: '+1W6 Schaden' }],
@@ -1933,14 +2026,16 @@
             } else if (user === 'test3') {
                 preset = {
                     id: newId, name: 'Boren der Stille', clazz: 'Mönch', subclass: 'Weg der Offenen Hand', level: '6',
-                    'hp-curr': '52', 'hp-max': '52', 'hp-temp': '0', 'ac': '16', 'str': '10', 'dex': '18', 'con': '14', 'int': '10', 'wis': '16', 'cha': '8',
+                    'hp-curr': '52', 'hp-max': '52', 'hp-temp': '0', 'ac': '16', 'speed': '13.5m', 'passive-perception': '16',
+                    'str': '10', 'dex': '18', 'con': '14', 'int': '10', 'wis': '16', 'cha': '8',
                     weapons: [{ name: 'Unbewaffneter Schlag', magic: '1', dice: '1W6' }],
                     potions: [{ type: 'Heiltrank (1W4+4)', count: '2' }]
                 };
             } else if (user === 'test4') {
                 preset = {
                     id: newId, name: 'Sir Alden', clazz: 'Kämpfer', subclass: 'Meister des Kampfs (Battle Master)', level: '6',
-                    'hp-curr': '60', 'hp-max': '60', 'hp-temp': '0', 'ac': '18', 'str': '18', 'dex': '10', 'con': '16', 'int': '10', 'wis': '12', 'cha': '10',
+                    'hp-curr': '60', 'hp-max': '60', 'hp-temp': '0', 'ac': '18', 'speed': '9m', 'passive-perception': '14',
+                    'str': '18', 'dex': '10', 'con': '16', 'int': '10', 'wis': '12', 'cha': '10',
                     weapons: [{ name: 'Großschwert +1', magic: '1', dice: '2W6' }],
                     potions: [{ type: 'Großer Heiltrank (2W4+2)', count: '2' }]
                 };
@@ -2249,9 +2344,11 @@
             }
             saveCharactersList(chars);
 
-            let activeInRoomCharId = localStorage.getItem('dnd_room_active_char_' + currentUser + '_' + activeRoom);
-            if (activeInRoomCharId === currentActiveCharId) {
-                pushCharacterToCloud();
+            if (activeRoom) {
+                let activeInRoomCharId = localStorage.getItem('dnd_room_active_char_' + currentUser + '_' + activeRoom);
+                if (activeInRoomCharId === currentActiveCharId) {
+                    pushCharacterToCloud();
+                }
             }
         }
 
