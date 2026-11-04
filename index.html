@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.5.6</title>
+    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.5.7</title>
     <!-- Firebase SDK (Cloud Live Sync) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -456,7 +456,6 @@
         .slot-inputs { display: flex; gap: 4px; margin-top: 2px; }
         .slot-inputs input { font-size: 0.85rem; padding: 4px; }
 
-        /* WAFFEN RASTER UPDATE */
         .weapon-header {
             display: grid;
             grid-template-columns: 1.8fr 0.8fr 1.3fr 1.1fr 1fr 32px;
@@ -778,8 +777,14 @@
                     </select>
                 </div>
                 <div class="field-left">
-                    <label>Stufe</label>
-                    <input type="number" id="char-level" value="6" placeholder="Stufe" oninput="updateAllCalculations(); saveData();">
+                    <label style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>Stufe</span>
+                        <span onclick="openLevelUpModal()" style="color: var(--pos-color); cursor:pointer; font-size:0.7rem;" title="Level Up Vorschau öffnen">⬆️ Info / Up</span>
+                    </label>
+                    <div style="display:flex; gap:4px;">
+                        <input type="number" id="char-level" value="6" placeholder="Stufe" oninput="updateAllCalculations(); saveData();" style="flex-grow:1;">
+                        <button type="button" class="btn-rest" onclick="openLevelUpModal()" style="padding: 0 8px; font-weight:bold; color:var(--pos-color); border-color:var(--pos-color);" title="Level Up Features anzeigen">✨</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1057,19 +1062,37 @@
         </div>
     </div>
 
-    <div class="version-badge" onclick="openChangelogModal()">v0.5.6 Damage Type Added</div>
+    <div class="version-badge" onclick="openChangelogModal()">v0.5.7 Level-Up Guide Added</div>
+
+    <!-- LEVEL UP POPUP MODAL -->
+    <div id="levelup-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="levelup-modal-title">✨ Level Up Vorschau</h2>
+                <button type="button" class="modal-close" onclick="closeLevelUpModal()">✕</button>
+            </div>
+            <div id="levelup-content" style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
+                <!-- Dynamischer Inhalt -->
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 15px;">
+                <button type="button" class="btn-main" onclick="applyLevelUp()">⬆️ Stufe erhöhen (+1)</button>
+                <button type="button" class="btn-rest" onclick="closeLevelUpModal()" style="padding: 10px 16px;">Schließen</button>
+            </div>
+        </div>
+    </div>
 
     <div id="changelog-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Version 0.5.6 - Changelog</h2>
+                <h2>Version 0.5.7 - Changelog</h2>
                 <button type="button" class="modal-close" onclick="closeChangelogModal()">✕</button>
             </div>
             <div class="changelog-item">
-                <h4>🗡️ Schadenstypen für Waffen</h4>
+                <h4>✨ Level Up & Klassen-Features Popup</h4>
                 <ul>
-                    <li>Auswahlfeld für den Schadenstyp hinzugefügt (Stich, Hieb, Wucht, Feuer, Kälte, etc.).</li>
-                    <li>Waffen-Raster erweitert für noch bessere Übersicht im Kampf.</li>
+                    <li>Neuer Level-Up-Button neben der Stufe hinzugefügt.</li>
+                    <li>Öffnet ein informatives Pop-up mit klassenspezifischen Features für die aktuelle & nächste Stufe (2024 Regeln kompatibel).</li>
+                    <li>Automatischer Stufenaufstieg per Button-Klick inklusive Ressourcen-Skalierung.</li>
                 </ul>
             </div>
         </div>
@@ -1112,6 +1135,105 @@
             "Zauberer": ["Drachenblut-Linie", "Wilde Magie"],
             "Magier": ["Schule der Evokation", "Schule der Abjuration"]
         };
+
+        // KLASSEN-FEATURES DATENBANK (FÜR LEVEL UP POPUP)
+        const classLevelFeatures = {
+            "Barbar": {
+                1: "Rage (Wut), Unarmored Defense (Ungerüstete Rüstung), Weapon Mastery",
+                2: "Danger Sense (Gefahrensinn), Reckless Attack (Rücksichtsloser Angriff)",
+                3: "Subclass (Primal Path), Primal Knowledge",
+                4: "Ability Score Improvement (ASI / Talent)",
+                5: "Extra Attack (Zusätzlicher Angriff), Fast Movement (Schnelle Bewegung)",
+                6: "Path Feature (z.B. Weltenbaum Vitalität), Mindless Rage",
+                7: "Feral Instinct (Wilder Instinkt), Instinctive Pounce",
+                8: "Ability Score Improvement (ASI / Talent)",
+                9: "Brutal Critical (1 Die)",
+                10: "Path Feature, Relentless Rage",
+                11: "Retaliation (Vergeltung)",
+                12: "Ability Score Improvement (ASI / Talent)",
+                13: "Brutal Critical (2 Dice)",
+                14: "Path Feature",
+                15: "Persistent Rage",
+                16: "Ability Score Improvement (ASI / Talent)",
+                17: "Brutal Critical (3 Dice)",
+                18: "Indomitable Might",
+                19: "Ability Score Improvement (ASI / Talent)",
+                20: "Primal Champion (+4 STR/CON)"
+            },
+            "Kämpfer": {
+                1: "Fighting Style, Second Wind (Durchschnaufen), Weapon Mastery",
+                2: "Action Surge (Aktionsschub), Tactical Mind",
+                3: "Subclass (Martial Archetype / Battle Master)",
+                4: "Ability Score Improvement (ASI / Talent)",
+                5: "Extra Attack (Zusätzlicher Angriff)",
+                6: "Ability Score Improvement (ASI / Talent)",
+                7: "Subclass Feature",
+                8: "Ability Score Improvement (ASI / Talent)",
+                9: "Indomitable (Unbeugsamen), Tactical Master",
+                10: "Subclass Feature, Extra Attack (2)",
+                11: "Extra Attack (2)",
+                12: "Ability Score Improvement (ASI / Talent)",
+                13: "Indomitable (2 uses)",
+                14: "Ability Score Improvement (ASI / Talent)",
+                15: "Subclass Feature",
+                16: "Ability Score Improvement (ASI / Talent)",
+                17: "Action Surge (2 uses), Indomitable (3 uses)",
+                18: "Subclass Feature",
+                19: "Ability Score Improvement (ASI / Talent)",
+                20: "Extra Attack (3)"
+            },
+            "Mönch": {
+                1: "Martial Arts, Unarmored Defense",
+                2: "Ki (Flurry of Blows, Patient Defense, Step of the Wind), Unarmored Movement",
+                3: "Subclass (Monastic Tradition), Deflect Attacks",
+                4: "Ability Score Improvement (ASI / Talent), Slow Fall",
+                5: "Extra Attack, Stunning Strike, Ki-Empowered Strikes",
+                6: "Subclass Feature, Evasion, Empowered Strikes",
+                7: "Purity of Body, Wholeness of Body",
+                8: "Ability Score Improvement (ASI / Talent)",
+                9: "Unarmored Movement Improvement",
+                10: "Advanced Subclass Feature, Self-Restoration",
+                11: "Subclass Feature",
+                12: "Ability Score Improvement (ASI / Talent)",
+                13: "Deflect Energy",
+                14: "Disciplined Survivor",
+                15: "Perfect Soul",
+                16: "Ability Score Improvement (ASI / Talent)",
+                17: "Subclass Capstone",
+                18: "Timeless Body",
+                19: "Ability Score Improvement (ASI / Talent)",
+                20: "Superior Body"
+            },
+            "Hexenmeister": {
+                1: "Pact Magic, Otherworldly Patron",
+                2: "Eldritch Invocations, Magical Cunning",
+                3: "Pact Boon",
+                4: "Ability Score Improvement (ASI / Talent)",
+                5: "Invocation Upgrade",
+                6: "Patron Feature",
+                7: "Invocation Upgrade",
+                8: "Ability Score Improvement (ASI / Talent)",
+                9: "Invocation Upgrade",
+                10: "Patron Feature",
+                11: "Mystic Arcanum (6th Level)",
+                12: "Ability Score Improvement (ASI / Talent)",
+                13: "Mystic Arcanum (7th Level)",
+                14: "Patron Feature",
+                15: "Mystic Arcanum (8th Level)",
+                16: "Ability Score Improvement (ASI / Talent)",
+                17: "Mystic Arcanum (9th Level)",
+                18: "Eldritch Master",
+                19: "Ability Score Improvement (ASI / Talent)",
+                20: "Eldritch Invoker"
+            }
+        };
+
+        function getDefaultFeatureText(clazz, lvl) {
+            if (classLevelFeatures[clazz] && classLevelFeatures[clazz][lvl]) {
+                return classLevelFeatures[clazz][lvl];
+            }
+            return `Neue Klassen-Fähigkeiten, Attributsverbesserung (ASI) oder Zaubergrad-Steigerung für Stufe ${lvl}.`;
+        }
 
         function setAuthMode(mode) {
             currentAuthMode = mode;
@@ -1684,6 +1806,66 @@
             updateAllCalculations();
         }
 
+        // LEVEL UP MODAL STEUERUNG
+        function openLevelUpModal() {
+            let clsEl = document.getElementById('char-class');
+            let lvlEl = document.getElementById('char-level');
+            if (!clsEl || !lvlEl) return;
+            let cls = clsEl.value;
+            let currentLvl = parseInt(lvlEl.value) || 1;
+            let nextLvl = Math.min(20, currentLvl + 1);
+
+            let titleElem = document.getElementById('levelup-modal-title');
+            let contentElem = document.getElementById('levelup-content');
+
+            titleElem.innerText = `✨ Stufenaufstieg: ${cls} (Stufe ${currentLvl} ➔ ${nextLvl})`;
+
+            let currentFeatures = getDefaultFeatureText(cls, currentLvl);
+            let nextFeatures = getDefaultFeatureText(cls, nextLvl);
+
+            contentElem.innerHTML = `
+                <div style="margin-bottom: 12px; background: #11151d; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <strong style="color: var(--accent);">Aktuelle Stufe (${currentLvl}):</strong>
+                    <p style="margin: 4px 0 0 0; color: var(--text-muted);">${currentFeatures}</p>
+                </div>
+                <div style="background: #16241b; padding: 10px; border-radius: 8px; border: 1px solid var(--pos-color);">
+                    <strong style="color: var(--pos-color);">Neu auf Stufe ${nextLvl} zu erwarten:</strong>
+                    <p style="margin: 4px 0 0 0; color: #e2e8f0; font-weight: bold;">${nextFeatures}</p>
+                </div>
+                <p style="font-size:0.75rem; color: var(--text-muted); margin-top: 10px;">Klicke unten auf "Stufe erhöhen", um deinen Charakter direkt auf Stufe ${nextLvl} zu setzen und Ressourcen anzupassen.</p>
+            `;
+
+            document.getElementById('levelup-modal').classList.remove('hidden');
+        }
+
+        function closeLevelUpModal() {
+            document.getElementById('levelup-modal').classList.add('hidden');
+        }
+
+        function applyLevelUp() {
+            let lvlEl = document.getElementById('char-level');
+            if (!lvlEl) return;
+            let currentLvl = parseInt(lvlEl.value) || 1;
+            if (currentLvl >= 20) {
+                alert("Du hast bereits die maximale Stufe 20 erreicht!");
+                closeLevelUpModal();
+                return;
+            }
+
+            let newLvl = currentLvl + 1;
+            lvlEl.value = newLvl;
+            
+            // PB automatisch anpassen (Stufe 1-4: +2, 5-8: +3, 9-12: +4, 13-16: +5, 17-20: +6)
+            let newPb = Math.floor((newLvl - 1) / 4) + 2;
+            let pbEl = document.getElementById('pb');
+            if (pbEl) pbEl.value = newPb;
+
+            updateAllCalculations();
+            saveData();
+            closeLevelUpModal();
+            alert(`🎉 Herzlichen Glückwunsch! Du bist erfolgreich auf Stufe ${newLvl} aufgestiegen!`);
+        }
+
         function initCloudSync() {
             if (!firebase.apps.length) {
                 try {
@@ -2160,20 +2342,16 @@
             formatValue('wis-mod', wisMod);
             formatValue('cha-mod', chaMod);
 
-            // STÄRKE FERTIGKEITEN & RETTUNGSWÜRFE
             setSkillDisplay('val-save-str', strMod, document.getElementById('save-str').checked);
             setSkillDisplay('val-skill-athletics', strMod, document.getElementById('skill-athletics').checked);
 
-            // GESCHICK FERTIGKEITEN & RETTUNGSWÜRFE
             setSkillDisplay('val-save-dex', dexMod, document.getElementById('save-dex').checked);
             setSkillDisplay('val-skill-acrobatics', dexMod, document.getElementById('skill-acrobatics').checked);
             setSkillDisplay('val-skill-sleight', dexMod, document.getElementById('skill-sleight').checked);
             setSkillDisplay('val-skill-stealth', dexMod, document.getElementById('skill-stealth').checked);
 
-            // KONSTITUTION RETTUNGSWURF
             setSkillDisplay('val-save-con', conMod, document.getElementById('save-con').checked);
 
-            // INTELLIGENZ FERTIGKEITEN & RETTUNGSWÜRFE
             setSkillDisplay('val-save-int', intMod, document.getElementById('save-int').checked);
             setSkillDisplay('val-skill-arcana', intMod, document.getElementById('skill-arcana').checked);
             setSkillDisplay('val-skill-history', intMod, document.getElementById('skill-history').checked);
@@ -2181,7 +2359,6 @@
             setSkillDisplay('val-skill-nature', intMod, document.getElementById('skill-nature').checked);
             setSkillDisplay('val-skill-religion', intMod, document.getElementById('skill-religion').checked);
 
-            // WEISHEIT FERTIGKEITEN & RETTUNGSWÜRFE
             setSkillDisplay('val-save-wis', wisMod, document.getElementById('save-wis').checked);
             setSkillDisplay('val-skill-animal', wisMod, document.getElementById('skill-animal').checked);
             setSkillDisplay('val-skill-insight', wisMod, document.getElementById('skill-insight').checked);
@@ -2189,7 +2366,6 @@
             setSkillDisplay('val-skill-perception', wisMod, document.getElementById('skill-perception').checked);
             setSkillDisplay('val-skill-survival', wisMod, document.getElementById('skill-survival').checked);
 
-            // CHARISMA FERTIGKEITEN & RETTUNGSWÜRFE
             setSkillDisplay('val-save-cha', chaMod, document.getElementById('save-cha').checked);
             setSkillDisplay('val-skill-deception', chaMod, document.getElementById('skill-deception').checked);
             setSkillDisplay('val-skill-intimidation', chaMod, document.getElementById('skill-intimidation').checked);
