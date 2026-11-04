@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.5.4</title>
+    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.5.5</title>
     <!-- Firebase SDK (Cloud Live Sync) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -891,8 +891,8 @@
                             <div class="mod-display" id="str-mod" style="color: var(--pos-color);">+3</div>
                         </div>
                     </div>
-                    <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-str" checked onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span>+6</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-athletics" checked onchange="updateAllCalculations(); saveData()"> Athletik</div><span>+6</span></div>
+                    <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-str" checked onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span id="val-save-str">+6</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-athletics" checked onchange="updateAllCalculations(); saveData()"> Athletik</div><span id="val-skill-athletics">+6</span></div>
                 </div>
                 <!-- DEX -->
                 <div class="attr-group">
@@ -903,10 +903,10 @@
                             <div class="mod-display" id="dex-mod" style="color: var(--pos-color);">+2</div>
                         </div>
                     </div>
-                    <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-dex" onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span>+2</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-acrobatics" onchange="updateAllCalculations(); saveData()"> Akrobatik</div><span>+2</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-sleight" onchange="updateAllCalculations(); saveData()"> Fingerfertigkeit</div><span>+2</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-stealth" onchange="updateAllCalculations(); saveData()"> Heimlichkeit</div><span>+2</span></div>
+                    <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-dex" onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span id="val-save-dex">+2</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-acrobatics" onchange="updateAllCalculations(); saveData()"> Akrobatik</div><span id="val-skill-acrobatics">+2</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-sleight" onchange="updateAllCalculations(); saveData()"> Fingerfertigkeit</div><span id="val-skill-sleight">+2</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-stealth" onchange="updateAllCalculations(); saveData()"> Heimlichkeit</div><span id="val-skill-stealth">+2</span></div>
                 </div>
                 <!-- CON -->
                 <div class="attr-group">
@@ -917,7 +917,7 @@
                             <div class="mod-display" id="con-mod" style="color: var(--pos-color);">+3</div>
                         </div>
                     </div>
-                    <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-con" checked onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span>+6</span></div>
+                    <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-con" checked onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span id="val-save-con">+6</span></div>
                 </div>
                 <!-- INT -->
                 <div class="attr-group">
@@ -928,12 +928,12 @@
                             <div class="mod-display" id="int-mod" style="color: var(--neg-color);">-1</div>
                         </div>
                     </div>
-                    <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-int" onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span>-1</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-arcana" onchange="updateAllCalculations(); saveData()"> Arkane Kunde</div><span>-1</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-history" onchange="updateAllCalculations(); saveData()"> Geschichte</div><span>-1</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-investigation" onchange="updateAllCalculations(); saveData()"> Untersuchung</div><span>-1</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-nature" onchange="updateAllCalculations(); saveData()"> Naturkunde</div><span>-1</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-religion" onchange="updateAllCalculations(); saveData()"> Religion</div><span>-1</span></div>
+                    <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-int" onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span id="val-save-int">-1</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-arcana" onchange="updateAllCalculations(); saveData()"> Arkane Kunde</div><span id="val-skill-arcana">-1</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-history" onchange="updateAllCalculations(); saveData()"> Geschichte</div><span id="val-skill-history">-1</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-investigation" onchange="updateAllCalculations(); saveData()"> Untersuchung</div><span id="val-skill-investigation">-1</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-nature" onchange="updateAllCalculations(); saveData()"> Naturkunde</div><span id="val-skill-nature">-1</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-religion" onchange="updateAllCalculations(); saveData()"> Religion</div><span id="val-skill-religion">-1</span></div>
                 </div>
                 <!-- WIS -->
                 <div class="attr-group">
@@ -944,12 +944,12 @@
                             <div class="mod-display" id="wis-mod">+0</div>
                         </div>
                     </div>
-                    <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-wis" onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span>+0</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-animal" onchange="updateAllCalculations(); saveData()"> Tierumgang</div><span>+0</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-insight" onchange="updateAllCalculations(); saveData()"> Einsicht</div><span>+0</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-medicine" onchange="updateAllCalculations(); saveData()"> Heilkunde</div><span>+0</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-perception" onchange="updateAllCalculations(); saveData()"> Wahrnehmung</div><span>+0</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-survival" onchange="updateAllCalculations(); saveData()"> Überleben</div><span>+0</span></div>
+                    <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-wis" onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span id="val-save-wis">+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-animal" onchange="updateAllCalculations(); saveData()"> Tierumgang</div><span id="val-skill-animal">+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-insight" onchange="updateAllCalculations(); saveData()"> Einsicht</div><span id="val-skill-insight">+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-medicine" onchange="updateAllCalculations(); saveData()"> Heilkunde</div><span id="val-skill-medicine">+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-perception" onchange="updateAllCalculations(); saveData()"> Wahrnehmung</div><span id="val-skill-perception">+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-survival" onchange="updateAllCalculations(); saveData()"> Überleben</div><span id="val-skill-survival">+0</span></div>
                 </div>
                 <!-- CHA -->
                 <div class="attr-group">
@@ -960,11 +960,11 @@
                             <div class="mod-display" id="cha-mod">+0</div>
                         </div>
                     </div>
-                    <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-cha" onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span>+0</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-deception" onchange="updateAllCalculations(); saveData()"> Täuschung</div><span>+0</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-intimidation" onchange="updateAllCalculations(); saveData()"> Einschüchtern</div><span>+0</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-performance" onchange="updateAllCalculations(); saveData()"> Auftreten</div><span>+0</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-persuasion" onchange="updateAllCalculations(); saveData()"> Überzeugen</div><span>+0</span></div>
+                    <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-cha" onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span id="val-save-cha">+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-deception" onchange="updateAllCalculations(); saveData()"> Täuschung</div><span id="val-skill-deception">+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-intimidation" onchange="updateAllCalculations(); saveData()"> Einschüchtern</div><span id="val-skill-intimidation">+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-performance" onchange="updateAllCalculations(); saveData()"> Auftreten</div><span id="val-skill-performance">+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-persuasion" onchange="updateAllCalculations(); saveData()"> Überzeugen</div><span id="val-skill-persuasion">+0</span></div>
                 </div>
             </div>
         </div>
@@ -1056,19 +1056,19 @@
         </div>
     </div>
 
-    <div class="version-badge" onclick="openChangelogModal()">v0.5.4 DM Textarea Notes</div>
+    <div class="version-badge" onclick="openChangelogModal()">v0.5.5 Skill Calc Fix</div>
 
     <div id="changelog-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Version 0.5.4 - Changelog</h2>
+                <h2>Version 0.5.5 - Changelog</h2>
                 <button type="button" class="modal-close" onclick="closeChangelogModal()">✕</button>
             </div>
             <div class="changelog-item">
-                <h4>👑 Erweiterte DM-Notizen</h4>
+                <h4>✨ Automatischer Fertigkeiten-Fix</h4>
                 <ul>
-                    <li>Geheime DM-Notizen wurden von einer einzeiligen Zeile in ein ausklappbares Textarea-Menü (Dropdown) umgewandelt.</li>
-                    <li>Erlaubt nun mehrzeilige und ausführlichere Notizen pro Charakter.</li>
+                    <li>Alle Rettungswürfe und Fertigkeiten besitzen nun eindeutige IDs.</li>
+                    <li>Änderungen an Attributen oder dem Übungsbonus aktualisieren alle Werte sofort fehlerfrei.</li>
                 </ul>
             </div>
         </div>
@@ -2022,6 +2022,7 @@
                     id: newId, name: 'Zar´thul Rocgarn', clazz: 'Barbar', subclass: 'Pfad des Weltenbaums', level: '6',
                     'hp-curr': '59', 'hp-max': '59', 'hp-temp': '0', 'ac': '15', 'speed': '12m', 'passive-perception': '13',
                     'str': '16', 'dex': '14', 'con': '16', 'int': '8', 'wis': '10', 'cha': '10',
+                    'save-str': true, 'con': '16', 'save-con': true, 'skill-athletics': true,
                     weapons: [{ name: 'Großaxt +1', magic: '1', dice: '1W12' }],
                     potions: [{ type: 'Heiltrank (1W4+4)', count: '2' }]
                 };
@@ -2132,6 +2133,14 @@
             else elem.style.color = "var(--text-muted)";
         }
 
+        function setSkillDisplay(elementId, mod, isProficient) {
+            let elem = document.getElementById(elementId);
+            if (!elem) return;
+            let total = mod + (isProficient ? (parseInt(document.getElementById('pb').value) || 0) : 0);
+            elem.innerText = (total >= 0 ? "+" + total : total);
+            elem.style.color = isProficient ? "var(--pos-color)" : "var(--text-muted)";
+        }
+
         function updateAllCalculations() {
             let pbEl = document.getElementById('pb');
             let pb = pbEl ? (parseInt(pbEl.value) || 0) : 0;
@@ -2149,6 +2158,42 @@
             formatValue('int-mod', intMod);
             formatValue('wis-mod', wisMod);
             formatValue('cha-mod', chaMod);
+
+            // STÄRKE FERTIGKEITEN & RETTUNGSWÜRFE
+            setSkillDisplay('val-save-str', strMod, document.getElementById('save-str').checked);
+            setSkillDisplay('val-skill-athletics', strMod, document.getElementById('skill-athletics').checked);
+
+            // GESCHICK FERTIGKEITEN & RETTUNGSWÜRFE
+            setSkillDisplay('val-save-dex', dexMod, document.getElementById('save-dex').checked);
+            setSkillDisplay('val-skill-acrobatics', dexMod, document.getElementById('skill-acrobatics').checked);
+            setSkillDisplay('val-skill-sleight', dexMod, document.getElementById('skill-sleight').checked);
+            setSkillDisplay('val-skill-stealth', dexMod, document.getElementById('skill-stealth').checked);
+
+            // KONSTITUTION RETTUNGSWURF
+            setSkillDisplay('val-save-con', conMod, document.getElementById('save-con').checked);
+
+            // INTELLIGENZ FERTIGKEITEN & RETTUNGSWÜRFE
+            setSkillDisplay('val-save-int', intMod, document.getElementById('save-int').checked);
+            setSkillDisplay('val-skill-arcana', intMod, document.getElementById('skill-arcana').checked);
+            setSkillDisplay('val-skill-history', intMod, document.getElementById('skill-history').checked);
+            setSkillDisplay('val-skill-investigation', intMod, document.getElementById('skill-investigation').checked);
+            setSkillDisplay('val-skill-nature', intMod, document.getElementById('skill-nature').checked);
+            setSkillDisplay('val-skill-religion', intMod, document.getElementById('skill-religion').checked);
+
+            // WEISHEIT FERTIGKEITEN & RETTUNGSWÜRFE
+            setSkillDisplay('val-save-wis', wisMod, document.getElementById('save-wis').checked);
+            setSkillDisplay('val-skill-animal', wisMod, document.getElementById('skill-animal').checked);
+            setSkillDisplay('val-skill-insight', wisMod, document.getElementById('skill-insight').checked);
+            setSkillDisplay('val-skill-medicine', wisMod, document.getElementById('skill-medicine').checked);
+            setSkillDisplay('val-skill-perception', wisMod, document.getElementById('skill-perception').checked);
+            setSkillDisplay('val-skill-survival', wisMod, document.getElementById('skill-survival').checked);
+
+            // CHARISMA FERTIGKEITEN & RETTUNGSWÜRFE
+            setSkillDisplay('val-save-cha', chaMod, document.getElementById('save-cha').checked);
+            setSkillDisplay('val-skill-deception', chaMod, document.getElementById('skill-deception').checked);
+            setSkillDisplay('val-skill-intimidation', chaMod, document.getElementById('skill-intimidation').checked);
+            setSkillDisplay('val-skill-performance', chaMod, document.getElementById('skill-performance').checked);
+            setSkillDisplay('val-skill-persuasion', chaMod, document.getElementById('skill-persuasion').checked);
 
             let autoAcToggle = document.getElementById('auto-ac-toggle');
             if (autoAcToggle && autoAcToggle.checked) {
