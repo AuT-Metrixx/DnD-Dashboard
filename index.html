@@ -1953,7 +1953,7 @@
             weaponRows.forEach(row => {
                 let magicElem = row.querySelector('.weapon-magic');
                 let magicVal = magicElem ? (parseInt(magicElem.value) || 0) : 0;
-                let totalAtk = strMod + pb + magicVal;
+                let totalAtk = strMod + magicVal;
                 let atkDisplay = row.querySelector('.weapon-atk-calc');
                 if (atkDisplay) atkDisplay.innerText = (totalAtk >= 0 ? "+" + totalAtk : totalAtk);
             });
