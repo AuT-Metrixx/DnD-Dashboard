@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.5.9</title>
+    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.6.0</title>
     <!-- Firebase SDK (Cloud Live Sync) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -29,7 +29,7 @@
             margin: 0;
             padding: 12px;
             padding-bottom: 60px;
-            max-width: 700px;
+            max-width: 750px;
             margin-left: auto;
             margin-right: auto;
         }
@@ -456,11 +456,12 @@
         .slot-inputs { display: flex; gap: 4px; margin-top: 2px; }
         .slot-inputs input { font-size: 0.85rem; padding: 4px; }
 
+        /* NEUES WEAPON HEADER & ROW DESIGN */
         .weapon-header {
             display: grid;
-            grid-template-columns: 1.5fr 0.8fr 0.7fr 0.8fr 1.1fr 1fr 32px;
+            grid-template-columns: 1.4fr 0.7fr 0.6fr 0.7fr 1fr 0.9fr 0.9fr 28px;
             gap: 4px;
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             color: var(--text-muted);
             margin-bottom: 4px;
             text-align: center;
@@ -469,21 +470,21 @@
         }
         .weapon-row {
             display: grid;
-            grid-template-columns: 1.5fr 0.8fr 0.7fr 0.8fr 1.1fr 1fr 32px;
+            grid-template-columns: 1.4fr 0.7fr 0.6fr 0.7fr 1fr 0.9fr 0.9fr 28px;
             gap: 4px;
             margin-bottom: 6px;
             align-items: center;
         }
         .weapon-row input, .weapon-row select { padding: 4px; font-size: 0.75rem; }
-        .weapon-atk-calc {
+        
+        .weapon-calc-box {
             background: #11151d;
             border: 1px solid var(--border-color);
             border-radius: 6px;
-            padding: 6px;
+            padding: 5px 2px;
             text-align: center;
             font-weight: bold;
-            font-size: 0.85rem;
-            color: var(--pos-color);
+            font-size: 0.8rem;
         }
 
         .spell-header {
@@ -976,9 +977,9 @@
         </div>
 
         <div class="section">
-            <div class="section-title">Waffen & Angriffe (Flexibler Angriffsbonus)</div>
+            <div class="section-title">Waffen & Angriffe (Inkl. Treffer- & Schadens-Bonus)</div>
             <div class="weapon-header">
-                <span>Waffe</span><span>Stat</span><span>Übung?</span><span>Magie</span><span>Schaden</span><span>Bonus</span><span></span>
+                <span>Waffe</span><span>Stat</span><span>Übung?</span><span>Magie</span><span>Schaden</span><span>Treffen</span><span>Dmg-Bonus</span><span></span>
             </div>
             <div id="weapons-list"></div>
             <button type="button" class="btn-add" onclick="addWeapon(); saveData();">+ Waffe hinzufügen</button>
@@ -1062,9 +1063,9 @@
         </div>
     </div>
 
-    <div class="version-badge" onclick="openChangelogModal()">v0.5.9 Separate Weapon Atk Calc</div>
+    <div class="version-badge" onclick="openChangelogModal()">v0.6.0 Split Atk & Dmg Bonus</div>
 
-    <!-- LEVEL UP MODAL MODAL -->
+    <!-- LEVEL UP MODAL -->
     <div id="levelup-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
@@ -1082,15 +1083,14 @@
     <div id="changelog-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Version 0.5.9 - Changelog</h2>
+                <h2>Version 0.6.0 - Changelog</h2>
                 <button type="button" class="modal-close" onclick="closeChangelogModal()">✕</button>
             </div>
             <div class="changelog-item">
-                <h4>⚔️ Flexibler Waffen-Angriffsbonus</h4>
+                <h4>💥 Getrennte Treffer- & Schadensberechnung</h4>
                 <ul>
-                    <li>Waffen berechnen sich nun unabhängig von den Fertigkeiten.</li>
-                    <li>Du kannst pro Waffe wählen, ob sie mit <strong>Stärke (STR)</strong> oder <strong>Geschicklichkeit (DEX)</strong> skaliert.</li>
-                    <li>Zuschaltbare Übungsbonus-Checkbox (Übung ja/nein) pro Waffe hinzugefügt.</li>
+                    <li>Anzeige 1: <strong>Treffen (+X auf W20)</strong> = Stat-Mod + Übungsbonus + Magischer Bonus.</li>
+                    <li>Anzeige 2: <strong>Dmg-Bonus (+X auf Schaden)</strong> = Stat-Mod + Magischer Bonus (+ Wut-Bonus falls Barbar in Wut).</li>
                 </ul>
             </div>
         </div>
@@ -1136,17 +1136,17 @@
 
         const classLevelFeatures = {
             "Barbar": {
-                1: "Rage (Wut), Unarmored Defense (Ungerüstete Rüstung), Weapon Mastery",
-                2: "Danger Sense (Gefahrensinn), Reckless Attack (Rücksichtsloser Angriff)",
+                1: "Rage (Wut), Unarmored Defense, Weapon Mastery",
+                2: "Danger Sense, Reckless Attack",
                 3: "Subclass (Primal Path), Primal Knowledge",
                 4: "Ability Score Improvement (ASI / Talent)",
-                5: "Extra Attack (Zusätzlicher Angriff), Fast Movement (Schnelle Bewegung)",
+                5: "Extra Attack, Fast Movement",
                 6: "Path Feature (z.B. Weltenbaum Vitalität), Mindless Rage",
-                7: "Feral Instinct (Wilder Instinkt), Instinctive Pounce",
+                7: "Feral Instinct, Instinctive Pounce",
                 8: "Ability Score Improvement (ASI / Talent)",
                 9: "Brutal Critical (1 Die)",
                 10: "Path Feature, Relentless Rage",
-                11: "Retaliation (Vergeltung)",
+                11: "Retaliation",
                 12: "Ability Score Improvement (ASI / Talent)",
                 13: "Brutal Critical (2 Dice)",
                 14: "Path Feature",
@@ -1158,16 +1158,16 @@
                 20: "Primal Champion (+4 STR/CON)"
             },
             "Kämpfer": {
-                1: "Fighting Style, Second Wind (Durchschnaufen), Weapon Mastery",
-                2: "Action Surge (Aktionsschub), Tactical Mind",
+                1: "Fighting Style, Second Wind, Weapon Mastery",
+                2: "Action Surge, Tactical Mind",
                 3: "Subclass (Martial Archetype / Battle Master)",
                 4: "Ability Score Improvement (ASI / Talent)",
-                5: "Extra Attack (Zusätzlicher Angriff)",
+                5: "Extra Attack",
                 6: "Ability Score Improvement (ASI / Talent)",
                 7: "Subclass Feature",
                 8: "Ability Score Improvement (ASI / Talent)",
-                9: "Indomitable (Unbeugsamen), Tactical Master",
-                10: "Subclass Feature, Extra Attack (2)",
+                9: "Indomitable, Tactical Master",
+                10: "Subclass Feature",
                 11: "Extra Attack (2)",
                 12: "Ability Score Improvement (ASI / Talent)",
                 13: "Indomitable (2 uses)",
@@ -1178,50 +1178,6 @@
                 18: "Subclass Feature",
                 19: "Ability Score Improvement (ASI / Talent)",
                 20: "Extra Attack (3)"
-            },
-            "Mönch": {
-                1: "Martial Arts, Unarmored Defense",
-                2: "Ki (Flurry of Blows, Patient Defense, Step of the Wind), Unarmored Movement",
-                3: "Subclass (Monastic Tradition), Deflect Attacks",
-                4: "Ability Score Improvement (ASI / Talent), Slow Fall",
-                5: "Extra Attack, Stunning Strike, Ki-Empowered Strikes",
-                6: "Subclass Feature, Evasion, Empowered Strikes",
-                7: "Purity of Body, Wholeness of Body",
-                8: "Ability Score Improvement (ASI / Talent)",
-                9: "Unarmored Movement Improvement",
-                10: "Advanced Subclass Feature, Self-Restoration",
-                11: "Subclass Feature",
-                12: "Ability Score Improvement (ASI / Talent)",
-                13: "Deflect Energy",
-                14: "Disciplined Survivor",
-                15: "Perfect Soul",
-                16: "Ability Score Improvement (ASI / Talent)",
-                17: "Subclass Capstone",
-                18: "Timeless Body",
-                19: "Ability Score Improvement (ASI / Talent)",
-                20: "Superior Body"
-            },
-            "Hexenmeister": {
-                1: "Pact Magic, Otherworldly Patron",
-                2: "Eldritch Invocations, Magical Cunning",
-                3: "Pact Boon",
-                4: "Ability Score Improvement (ASI / Talent)",
-                5: "Invocation Upgrade",
-                6: "Patron Feature",
-                7: "Invocation Upgrade",
-                8: "Ability Score Improvement (ASI / Talent)",
-                9: "Invocation Upgrade",
-                10: "Patron Feature",
-                11: "Mystic Arcanum (6th Level)",
-                12: "Ability Score Improvement (ASI / Talent)",
-                13: "Mystic Arcanum (7th Level)",
-                14: "Patron Feature",
-                15: "Mystic Arcanum (8th Level)",
-                16: "Ability Score Improvement (ASI / Talent)",
-                17: "Mystic Arcanum (9th Level)",
-                18: "Eldritch Master",
-                19: "Ability Score Improvement (ASI / Talent)",
-                20: "Eldritch Invoker"
             }
         };
 
@@ -1527,6 +1483,7 @@
                 btnToggle.classList.remove('active');
             }
             updateRageButtonText();
+            updateAllCalculations();
             saveData();
         }
 
@@ -2252,8 +2209,8 @@
                     'str': '16', 'dex': '14', 'con': '16', 'int': '8', 'wis': '10', 'cha': '10',
                     'save-str': true, 'con': '16', 'save-con': true, 'skill-athletics': true,
                     weapons: [
-                        { name: 'Speer', stat: 'str', prof: true, magic: '1', dice: '1W8 / 1W10', type: 'Stich' },
-                        { name: 'Zweihandaxt', stat: 'str', prof: true, magic: '0', dice: '1W12', type: 'Hieb' }
+                        { name: 'Speer', stat: 'str', prof: true, magic: '1', dice: '1W8 / 1W10' },
+                        { name: 'Zweihandaxt', stat: 'str', prof: true, magic: '0', dice: '1W12' }
                     ],
                     potions: [{ type: 'Heiltrank (1W4+4)', count: '2' }]
                 };
@@ -2265,7 +2222,7 @@
                     'spell-attr': 'cha',
                     spells: [{ prep: true, name: 'Eldritch Blast', level: '0', time: '1 Akt.', conc: false, notes: 'Magischer Strahl' },
                              { prep: true, name: 'Hex (Hexenmal)', level: '1', time: '1 Bonus', conc: true, notes: '+1W6 Schaden' }],
-                    weapons: [{ name: 'Leichter Stab +1', stat: 'str', prof: true, magic: '1', dice: '1W6', type: 'Wucht' }],
+                    weapons: [{ name: 'Leichter Stab +1', stat: 'str', prof: true, magic: '1', dice: '1W6' }],
                     potions: [{ type: 'Heiltrank (1W4+4)', count: '1' }]
                 };
             } else if (user === 'test3') {
@@ -2273,7 +2230,7 @@
                     id: newId, name: 'Boren der Stille', clazz: 'Mönch', subclass: 'Weg der Offenen Hand', level: '6',
                     'hp-curr': '52', 'hp-max': '52', 'hp-temp': '0', 'ac': '16', 'speed': '13.5m', 'passive-perception': '16',
                     'str': '10', 'dex': '18', 'con': '14', 'int': '10', 'wis': '16', 'cha': '8',
-                    weapons: [{ name: 'Unbewaffneter Schlag', stat: 'dex', prof: true, magic: '1', dice: '1W6', type: 'Wucht' }],
+                    weapons: [{ name: 'Unbewaffneter Schlag', stat: 'dex', prof: true, magic: '1', dice: '1W6' }],
                     potions: [{ type: 'Heiltrank (1W4+4)', count: '2' }]
                 };
             } else if (user === 'test4') {
@@ -2281,7 +2238,7 @@
                     id: newId, name: 'Sir Alden', clazz: 'Kämpfer', subclass: 'Meister des Kampfs (Battle Master)', level: '6',
                     'hp-curr': '60', 'hp-max': '60', 'hp-temp': '0', 'ac': '18', 'speed': '9m', 'passive-perception': '14',
                     'str': '18', 'dex': '10', 'con': '16', 'int': '10', 'wis': '12', 'cha': '10',
-                    weapons: [{ name: 'Großschwert +1', stat: 'str', prof: true, magic: '1', dice: '2W6', type: 'Hieb' }],
+                    weapons: [{ name: 'Großschwert +1', stat: 'str', prof: true, magic: '1', dice: '2W6' }],
                     potions: [{ type: 'Großer Heiltrank (2W4+2)', count: '2' }]
                 };
             }
@@ -2340,7 +2297,7 @@
             if (weaponsList) {
                 weaponsList.innerHTML = '';
                 if (data.weapons && data.weapons.length > 0) {
-                    data.weapons.forEach(w => addWeapon(w.name, w.stat, w.prof, w.magic, w.dice, w.type));
+                    data.weapons.forEach(w => addWeapon(w.name, w.stat, w.prof, w.magic, w.dice));
                 }
             }
 
@@ -2433,7 +2390,16 @@
                 if (acField) acField.value = calculatedAc;
             }
 
-            // SEPARATE WAFFEN-BERECHNUNG (STAT + PROFICIENCY + MAGIC)
+            // BARBAREN WUT-BONUS RECHNER
+            let btnToggleRage = document.getElementById('btn-toggle-rage');
+            let isRaging = (document.getElementById('char-class').value === "Barbar" && btnToggleRage && btnToggleRage.classList.contains('active'));
+            let rageDmgBonus = 0;
+            if (isRaging) {
+                let charLevel = parseInt(document.getElementById('char-level').value) || 1;
+                rageDmgBonus = charLevel >= 16 ? 4 : (charLevel >= 9 ? 3 : 2);
+            }
+
+            // WAFFEN BERECHNUNG (TREFFEN VS. SCHADENS-BONUS)
             let weaponRows = document.querySelectorAll('.weapon-row');
             weaponRows.forEach(row => {
                 let statSel = row.querySelector('.weapon-stat');
@@ -2447,9 +2413,21 @@
                 let magicElem = row.querySelector('.weapon-magic');
                 let magicVal = magicElem ? (parseInt(magicElem.value) || 0) : 0;
 
+                // TREFFER-BONUS (+X AUF W20)
                 let totalAtk = statMod + profVal + magicVal;
                 let atkDisplay = row.querySelector('.weapon-atk-calc');
-                if (atkDisplay) atkDisplay.innerText = (totalAtk >= 0 ? "+" + totalAtk : totalAtk);
+                if (atkDisplay) {
+                    atkDisplay.innerText = (totalAtk >= 0 ? "+" + totalAtk : totalAtk);
+                    atkDisplay.style.color = "var(--pos-color)";
+                }
+
+                // SCHADENS-BONUS (+X AUF SCHADEN) -> Stat + Magie (+ Wut falls Nahkampf)
+                let totalDmgMod = statMod + magicVal + (statVal === 'str' ? rageDmgBonus : 0);
+                let dmgDisplay = row.querySelector('.weapon-dmg-calc');
+                if (dmgDisplay) {
+                    dmgDisplay.innerText = (totalDmgMod >= 0 ? "+" + totalDmgMod : totalDmgMod);
+                    dmgDisplay.style.color = (isRaging && statVal === 'str') ? "var(--warning-color)" : "var(--accent)";
+                }
             });
 
             let spellAttrEl = document.getElementById('spell-attr');
@@ -2501,7 +2479,7 @@
             list.appendChild(wrapper);
         }
 
-        function addWeapon(name = '', stat = 'str', prof = true, magic = 0, dice = '1W8', type = 'Stich') {
+        function addWeapon(name = '', stat = 'str', prof = true, magic = 0, dice = '1W8') {
             let list = document.getElementById('weapons-list');
             if (!list) return;
             let newRow = document.createElement('div');
@@ -2517,7 +2495,8 @@
                 </div>
                 <input type="number" placeholder="0" value="${magic}" class="weapon-magic" oninput="updateAllCalculations(); saveData();">
                 <input type="text" placeholder="1W8" value="${dice}" class="weapon-dice" oninput="saveData()">
-                <div class="calc-display weapon-atk-calc">+0</div>
+                <div class="weapon-calc-box weapon-atk-calc" title="Treffer-Bonus (+X auf W20)">+0</div>
+                <div class="weapon-calc-box weapon-dmg-calc" title="Schadens-Bonus (+X auf Schaden)">+0</div>
                 <button type="button" class="btn-remove" onclick="this.parentElement.remove(); saveData();">✕</button>
             `;
             list.appendChild(newRow);
