@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.5.8</title>
+    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.5.9</title>
     <!-- Firebase SDK (Cloud Live Sync) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -458,7 +458,7 @@
 
         .weapon-header {
             display: grid;
-            grid-template-columns: 1.8fr 0.8fr 1.3fr 1.1fr 1fr 32px;
+            grid-template-columns: 1.5fr 0.8fr 0.7fr 0.8fr 1.1fr 1fr 32px;
             gap: 4px;
             font-size: 0.65rem;
             color: var(--text-muted);
@@ -469,7 +469,7 @@
         }
         .weapon-row {
             display: grid;
-            grid-template-columns: 1.8fr 0.8fr 1.3fr 1.1fr 1fr 32px;
+            grid-template-columns: 1.5fr 0.8fr 0.7fr 0.8fr 1.1fr 1fr 32px;
             gap: 4px;
             margin-bottom: 6px;
             align-items: center;
@@ -976,9 +976,9 @@
         </div>
 
         <div class="section">
-            <div class="section-title">Waffen & Angriffe</div>
+            <div class="section-title">Waffen & Angriffe (Flexibler Angriffsbonus)</div>
             <div class="weapon-header">
-                <span>Waffe</span><span>Magie (+X)</span><span>Schaden</span><span>Typ</span><span>Bonus</span><span></span>
+                <span>Waffe</span><span>Stat</span><span>Übung?</span><span>Magie</span><span>Schaden</span><span>Bonus</span><span></span>
             </div>
             <div id="weapons-list"></div>
             <button type="button" class="btn-add" onclick="addWeapon(); saveData();">+ Waffe hinzufügen</button>
@@ -1062,18 +1062,16 @@
         </div>
     </div>
 
-    <div class="version-badge" onclick="openChangelogModal()">v0.5.8 Cloud Character Sync</div>
+    <div class="version-badge" onclick="openChangelogModal()">v0.5.9 Separate Weapon Atk Calc</div>
 
-    <!-- LEVEL UP POPUP MODAL -->
+    <!-- LEVEL UP MODAL MODAL -->
     <div id="levelup-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
                 <h2 id="levelup-modal-title">✨ Level Up Vorschau</h2>
                 <button type="button" class="modal-close" onclick="closeLevelUpModal()">✕</button>
             </div>
-            <div id="levelup-content" style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
-                <!-- Dynamischer Inhalt -->
-            </div>
+            <div id="levelup-content" style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;"></div>
             <div style="display: flex; gap: 8px; margin-top: 15px;">
                 <button type="button" class="btn-main" onclick="applyLevelUp()">⬆️ Stufe erhöhen (+1)</button>
                 <button type="button" class="btn-rest" onclick="closeLevelUpModal()" style="padding: 10px 16px;">Schließen</button>
@@ -1084,14 +1082,15 @@
     <div id="changelog-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Version 0.5.8 - Changelog</h2>
+                <h2>Version 0.5.9 - Changelog</h2>
                 <button type="button" class="modal-close" onclick="closeChangelogModal()">✕</button>
             </div>
             <div class="changelog-item">
-                <h4>☁️ Cloud-Synchronisation für Charaktere</h4>
+                <h4>⚔️ Flexibler Waffen-Angriffsbonus</h4>
                 <ul>
-                    <li>Deine Charakter-Liste und alle Charakter-Daten werden nun direkt in Firebase unter deinem Account gespeichert.</li>
-                    <li>Egal ob PC oder Smartphone – beim Einloggen mit deinem Account sind deine Helden nun auf allen Geräten verfügbar.</li>
+                    <li>Waffen berechnen sich nun unabhängig von den Fertigkeiten.</li>
+                    <li>Du kannst pro Waffe wählen, ob sie mit <strong>Stärke (STR)</strong> oder <strong>Geschicklichkeit (DEX)</strong> skaliert.</li>
+                    <li>Zuschaltbare Übungsbonus-Checkbox (Übung ja/nein) pro Waffe hinzugefügt.</li>
                 </ul>
             </div>
         </div>
@@ -1862,7 +1861,6 @@
             alert(`🎉 Herzlichen Glückwunsch! Du bist erfolgreich auf Stufe ${newLvl} aufgestiegen!`);
         }
 
-        // FIREBASE INITIALISIERUNG & CLOUD CHARAKTER SYNCHRONISATION
         function initFirebaseAndLoad() {
             if (!firebase.apps.length) {
                 try {
@@ -1873,7 +1871,6 @@
             }
 
             if (isCloudActive && db && currentUser) {
-                // Lade Account-Daten aus der Cloud
                 db.ref('user_characters/' + currentUser).once('value', (snapshot) => {
                     let cloudChars = snapshot.val();
                     if (cloudChars) {
@@ -2150,7 +2147,6 @@
 
         function saveCharactersList(list) {
             localStorage.setItem('dnd_characters_index_' + currentUser, JSON.stringify(list));
-            // SYNCHRONISIERE CHARAKTER-LISTE IN DIE CLOUD
             if (isCloudActive && db && currentUser) {
                 db.ref('user_characters/' + currentUser).set(list);
             }
@@ -2230,7 +2226,6 @@
             currentActiveCharId = charId;
             localStorage.setItem('dnd_active_char_' + currentUser, charId);
             
-            // Versuche Sheet von Cloud zu laden falls lokal nicht vorhanden
             if (isCloudActive && db && currentUser) {
                 db.ref('user_sheets/' + currentUser + '/' + charId).once('value', (snapshot) => {
                     let cloudSheet = snapshot.val();
@@ -2256,7 +2251,10 @@
                     'hp-curr': '59', 'hp-max': '59', 'hp-temp': '0', 'ac': '15', 'speed': '12m', 'passive-perception': '13',
                     'str': '16', 'dex': '14', 'con': '16', 'int': '8', 'wis': '10', 'cha': '10',
                     'save-str': true, 'con': '16', 'save-con': true, 'skill-athletics': true,
-                    weapons: [{ name: 'Speer', magic: '1', dice: '1W8 / 1W10', type: 'Stich' }, { name: 'Zweihandaxt', magic: '0', dice: '1W12', type: 'Hieb' }],
+                    weapons: [
+                        { name: 'Speer', stat: 'str', prof: true, magic: '1', dice: '1W8 / 1W10', type: 'Stich' },
+                        { name: 'Zweihandaxt', stat: 'str', prof: true, magic: '0', dice: '1W12', type: 'Hieb' }
+                    ],
                     potions: [{ type: 'Heiltrank (1W4+4)', count: '2' }]
                 };
             } else if (user === 'test2') {
@@ -2267,7 +2265,7 @@
                     'spell-attr': 'cha',
                     spells: [{ prep: true, name: 'Eldritch Blast', level: '0', time: '1 Akt.', conc: false, notes: 'Magischer Strahl' },
                              { prep: true, name: 'Hex (Hexenmal)', level: '1', time: '1 Bonus', conc: true, notes: '+1W6 Schaden' }],
-                    weapons: [{ name: 'Leichter Stab +1', magic: '1', dice: '1W6', type: 'Wucht' }],
+                    weapons: [{ name: 'Leichter Stab +1', stat: 'str', prof: true, magic: '1', dice: '1W6', type: 'Wucht' }],
                     potions: [{ type: 'Heiltrank (1W4+4)', count: '1' }]
                 };
             } else if (user === 'test3') {
@@ -2275,7 +2273,7 @@
                     id: newId, name: 'Boren der Stille', clazz: 'Mönch', subclass: 'Weg der Offenen Hand', level: '6',
                     'hp-curr': '52', 'hp-max': '52', 'hp-temp': '0', 'ac': '16', 'speed': '13.5m', 'passive-perception': '16',
                     'str': '10', 'dex': '18', 'con': '14', 'int': '10', 'wis': '16', 'cha': '8',
-                    weapons: [{ name: 'Unbewaffneter Schlag', magic: '1', dice: '1W6', type: 'Wucht' }],
+                    weapons: [{ name: 'Unbewaffneter Schlag', stat: 'dex', prof: true, magic: '1', dice: '1W6', type: 'Wucht' }],
                     potions: [{ type: 'Heiltrank (1W4+4)', count: '2' }]
                 };
             } else if (user === 'test4') {
@@ -2283,7 +2281,7 @@
                     id: newId, name: 'Sir Alden', clazz: 'Kämpfer', subclass: 'Meister des Kampfs (Battle Master)', level: '6',
                     'hp-curr': '60', 'hp-max': '60', 'hp-temp': '0', 'ac': '18', 'speed': '9m', 'passive-perception': '14',
                     'str': '18', 'dex': '10', 'con': '16', 'int': '10', 'wis': '12', 'cha': '10',
-                    weapons: [{ name: 'Großschwert +1', magic: '1', dice: '2W6', type: 'Hieb' }],
+                    weapons: [{ name: 'Großschwert +1', stat: 'str', prof: true, magic: '1', dice: '2W6', type: 'Hieb' }],
                     potions: [{ type: 'Großer Heiltrank (2W4+2)', count: '2' }]
                 };
             }
@@ -2342,7 +2340,7 @@
             if (weaponsList) {
                 weaponsList.innerHTML = '';
                 if (data.weapons && data.weapons.length > 0) {
-                    data.weapons.forEach(w => addWeapon(w.name, w.magic, w.dice, w.type));
+                    data.weapons.forEach(w => addWeapon(w.name, w.stat, w.prof, w.magic, w.dice, w.type));
                 }
             }
 
@@ -2435,11 +2433,21 @@
                 if (acField) acField.value = calculatedAc;
             }
 
+            // SEPARATE WAFFEN-BERECHNUNG (STAT + PROFICIENCY + MAGIC)
             let weaponRows = document.querySelectorAll('.weapon-row');
             weaponRows.forEach(row => {
+                let statSel = row.querySelector('.weapon-stat');
+                let statVal = statSel ? statSel.value : 'str';
+                let statMod = (statVal === 'dex') ? dexMod : strMod;
+
+                let profBox = row.querySelector('.weapon-prof');
+                let hasProf = profBox ? profBox.checked : true;
+                let profVal = hasProf ? pb : 0;
+
                 let magicElem = row.querySelector('.weapon-magic');
                 let magicVal = magicElem ? (parseInt(magicElem.value) || 0) : 0;
-                let totalAtk = strMod + pb + magicVal;
+
+                let totalAtk = statMod + profVal + magicVal;
                 let atkDisplay = row.querySelector('.weapon-atk-calc');
                 if (atkDisplay) atkDisplay.innerText = (totalAtk >= 0 ? "+" + totalAtk : totalAtk);
             });
@@ -2493,28 +2501,22 @@
             list.appendChild(wrapper);
         }
 
-        function addWeapon(name = '', magic = 0, dice = '1W8', type = 'Stich') {
+        function addWeapon(name = '', stat = 'str', prof = true, magic = 0, dice = '1W8', type = 'Stich') {
             let list = document.getElementById('weapons-list');
             if (!list) return;
             let newRow = document.createElement('div');
             newRow.className = 'weapon-row';
             newRow.innerHTML = `
                 <input type="text" placeholder="Waffe" value="${name}" class="weapon-name" oninput="saveData()">
+                <select class="weapon-stat" onchange="updateAllCalculations(); saveData();">
+                    <option value="str" ${stat==='str'?'selected':''}>STR</option>
+                    <option value="dex" ${stat==='dex'?'selected':''}>DEX</option>
+                </select>
+                <div style="display:flex; justify-content:center; align-items:center;">
+                    <input type="checkbox" class="weapon-prof" ${prof ? 'checked' : ''} onchange="updateAllCalculations(); saveData();" style="accent-color: var(--pos-color); width: 14px; height: 14px; cursor: pointer;">
+                </div>
                 <input type="number" placeholder="0" value="${magic}" class="weapon-magic" oninput="updateAllCalculations(); saveData();">
                 <input type="text" placeholder="1W8" value="${dice}" class="weapon-dice" oninput="saveData()">
-                <select class="weapon-type" onchange="saveData()">
-                    <option value="Stich" ${type==='Stich'?'selected':''}>Stich</option>
-                    <option value="Hieb" ${type==='Hieb'?'selected':''}>Hieb</option>
-                    <option value="Wucht" ${type==='Wucht'?'selected':''}>Wucht</option>
-                    <option value="Feuer" ${type==='Feuer'?'selected':''}>Feuer</option>
-                    <option value="Kälte" ${type==='Kälte'?'selected':''}>Kälte</option>
-                    <option value="Blitz" ${type==='Blitz'?'selected':''}>Blitz</option>
-                    <option value="Säure" ${type==='Säure'?'selected':''}>Säure</option>
-                    <option value="Nekrotisch" ${type==='Nekrotisch'?'selected':''}>Nekro.</option>
-                    <option value="Gleißend" ${type==='Gleißend'?'selected':''}>Gleiß.</option>
-                    <option value="Gift" ${type==='Gift'?'selected':''}>Gift</option>
-                    <option value="Magisch" ${type==='Magisch'?'selected':''}>Magisch</option>
-                </select>
                 <div class="calc-display weapon-atk-calc">+0</div>
                 <button type="button" class="btn-remove" onclick="this.parentElement.remove(); saveData();">✕</button>
             `;
@@ -2584,14 +2586,16 @@
             let weapons = [];
             document.querySelectorAll('.weapon-row').forEach(row => {
                 let wName = row.querySelector('.weapon-name');
+                let wStat = row.querySelector('.weapon-stat');
+                let wProf = row.querySelector('.weapon-prof');
                 let wMag = row.querySelector('.weapon-magic');
                 let wDice = row.querySelector('.weapon-dice');
-                let wType = row.querySelector('.weapon-type');
                 weapons.push({
                     name: wName ? wName.value : '',
+                    stat: wStat ? wStat.value : 'str',
+                    prof: wProf ? wProf.checked : true,
                     magic: wMag ? wMag.value : '0',
-                    dice: wDice ? wDice.value : '1W8',
-                    type: wType ? wType.value : 'Stich'
+                    dice: wDice ? wDice.value : '1W8'
                 });
             });
             data.weapons = weapons;
@@ -2628,7 +2632,6 @@
 
             localStorage.setItem('dnd_sheet_data_' + currentUser + '_' + currentActiveCharId, JSON.stringify(data));
 
-            // SPEICHERE CHARAKTER SHEET DIRECT IN FIREBASE
             if (isCloudActive && db && currentUser) {
                 db.ref('user_sheets/' + currentUser + '/' + currentActiveCharId).set(data);
             }
