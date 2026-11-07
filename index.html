@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.6.0</title>
+    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.6.1</title>
     <!-- Firebase SDK (Cloud Live Sync) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -456,7 +456,6 @@
         .slot-inputs { display: flex; gap: 4px; margin-top: 2px; }
         .slot-inputs input { font-size: 0.85rem; padding: 4px; }
 
-        /* NEUES WEAPON HEADER & ROW DESIGN */
         .weapon-header {
             display: grid;
             grid-template-columns: 1.4fr 0.7fr 0.6fr 0.7fr 1fr 0.9fr 0.9fr 28px;
@@ -1030,9 +1029,9 @@
         </div>
 
         <div class="section">
-            <div class="section-title">Tränke & Verbrauchsgegenstände</div>
+            <div class="section-title">Tränke, Vorräte & Verbrauchsgegenstände</div>
             <div id="potions-container"></div>
-            <button type="button" class="btn-add" onclick="addPotionSlot(); saveData();">+ Trank / Item hinzufügen</button>
+            <button type="button" class="btn-add" onclick="addPotionSlot(); saveData();">+ Item / Vorrat hinzufügen</button>
         </div>
     </div>
 
@@ -1063,7 +1062,7 @@
         </div>
     </div>
 
-    <div class="version-badge" onclick="openChangelogModal()">v0.6.0 Split Atk & Dmg Bonus</div>
+    <div class="version-badge" onclick="openChangelogModal()">v0.6.1 Custom Consumable Inputs</div>
 
     <!-- LEVEL UP MODAL -->
     <div id="levelup-modal" class="modal-overlay hidden">
@@ -1083,14 +1082,14 @@
     <div id="changelog-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Version 0.6.0 - Changelog</h2>
+                <h2>Version 0.6.1 - Changelog</h2>
                 <button type="button" class="modal-close" onclick="closeChangelogModal()">✕</button>
             </div>
             <div class="changelog-item">
-                <h4>💥 Getrennte Treffer- & Schadensberechnung</h4>
+                <h4>📦 Eigene Verbrauchsgegenstände & Vorräte</h4>
                 <ul>
-                    <li>Anzeige 1: <strong>Treffen (+X auf W20)</strong> = Stat-Mod + Übungsbonus + Magischer Bonus.</li>
-                    <li>Anzeige 2: <strong>Dmg-Bonus (+X auf Schaden)</strong> = Stat-Mod + Magischer Bonus (+ Wut-Bonus falls Barbar in Wut).</li>
+                    <li><strong>Dynamisches Textfeld:</strong> Bei Auswahl von "Eigenes Item" erscheint direkt ein Freitext-Eingabefeld.</li>
+                    <li><strong>Neue Schnellauswahl-Vorräte:</strong> Tagesrationen, Fackeln, Schlafsack, Hanfseil, Zunderbüchse, Kräuter, Pfeile/Bolzen etc. hinzugefügt.</li>
                 </ul>
             </div>
         </div>
@@ -2212,7 +2211,7 @@
                         { name: 'Speer', stat: 'str', prof: true, magic: '1', dice: '1W8 / 1W10' },
                         { name: 'Zweihandaxt', stat: 'str', prof: true, magic: '0', dice: '1W12' }
                     ],
-                    potions: [{ type: 'Heiltrank (1W4+4)', count: '2' }]
+                    potions: [{ type: 'Heiltrank (1W4+4)', count: '2', customName: '' }, { type: 'Tagesrationen', count: '5', customName: '' }]
                 };
             } else if (user === 'test2') {
                 preset = {
@@ -2223,7 +2222,7 @@
                     spells: [{ prep: true, name: 'Eldritch Blast', level: '0', time: '1 Akt.', conc: false, notes: 'Magischer Strahl' },
                              { prep: true, name: 'Hex (Hexenmal)', level: '1', time: '1 Bonus', conc: true, notes: '+1W6 Schaden' }],
                     weapons: [{ name: 'Leichter Stab +1', stat: 'str', prof: true, magic: '1', dice: '1W6' }],
-                    potions: [{ type: 'Heiltrank (1W4+4)', count: '1' }]
+                    potions: [{ type: 'Heiltrank (1W4+4)', count: '1', customName: '' }]
                 };
             } else if (user === 'test3') {
                 preset = {
@@ -2231,7 +2230,7 @@
                     'hp-curr': '52', 'hp-max': '52', 'hp-temp': '0', 'ac': '16', 'speed': '13.5m', 'passive-perception': '16',
                     'str': '10', 'dex': '18', 'con': '14', 'int': '10', 'wis': '16', 'cha': '8',
                     weapons: [{ name: 'Unbewaffneter Schlag', stat: 'dex', prof: true, magic: '1', dice: '1W6' }],
-                    potions: [{ type: 'Heiltrank (1W4+4)', count: '2' }]
+                    potions: [{ type: 'Heiltrank (1W4+4)', count: '2', customName: '' }]
                 };
             } else if (user === 'test4') {
                 preset = {
@@ -2239,7 +2238,7 @@
                     'hp-curr': '60', 'hp-max': '60', 'hp-temp': '0', 'ac': '18', 'speed': '9m', 'passive-perception': '14',
                     'str': '18', 'dex': '10', 'con': '16', 'int': '10', 'wis': '12', 'cha': '10',
                     weapons: [{ name: 'Großschwert +1', stat: 'str', prof: true, magic: '1', dice: '2W6' }],
-                    potions: [{ type: 'Großer Heiltrank (2W4+2)', count: '2' }]
+                    potions: [{ type: 'Großer Heiltrank (2W4+2)', count: '2', customName: '' }]
                 };
             }
 
@@ -2305,7 +2304,7 @@
             if (potionsContainer) {
                 potionsContainer.innerHTML = '';
                 if (data.potions && data.potions.length > 0) {
-                    data.potions.forEach(p => addPotionSlot(p.type, p.count));
+                    data.potions.forEach(p => addPotionSlot(p.type, p.count, p.customName || ''));
                 }
             }
 
@@ -2390,7 +2389,6 @@
                 if (acField) acField.value = calculatedAc;
             }
 
-            // BARBAREN WUT-BONUS RECHNER
             let btnToggleRage = document.getElementById('btn-toggle-rage');
             let isRaging = (document.getElementById('char-class').value === "Barbar" && btnToggleRage && btnToggleRage.classList.contains('active'));
             let rageDmgBonus = 0;
@@ -2399,7 +2397,6 @@
                 rageDmgBonus = charLevel >= 16 ? 4 : (charLevel >= 9 ? 3 : 2);
             }
 
-            // WAFFEN BERECHNUNG (TREFFEN VS. SCHADENS-BONUS)
             let weaponRows = document.querySelectorAll('.weapon-row');
             weaponRows.forEach(row => {
                 let statSel = row.querySelector('.weapon-stat');
@@ -2413,7 +2410,6 @@
                 let magicElem = row.querySelector('.weapon-magic');
                 let magicVal = magicElem ? (parseInt(magicElem.value) || 0) : 0;
 
-                // TREFFER-BONUS (+X AUF W20)
                 let totalAtk = statMod + profVal + magicVal;
                 let atkDisplay = row.querySelector('.weapon-atk-calc');
                 if (atkDisplay) {
@@ -2421,7 +2417,6 @@
                     atkDisplay.style.color = "var(--pos-color)";
                 }
 
-                // SCHADENS-BONUS (+X AUF SCHADEN) -> Stat + Magie (+ Wut falls Nahkampf)
                 let totalDmgMod = statMod + magicVal + (statVal === 'str' ? rageDmgBonus : 0);
                 let dmgDisplay = row.querySelector('.weapon-dmg-calc');
                 if (dmgDisplay) {
@@ -2503,31 +2498,57 @@
             updateAllCalculations();
         }
 
-        function addPotionSlot(selectedType = 'Heiltrank (1W4+4)', count = 1) {
+        function onPotionTypeChange(selectElem) {
+            let card = selectElem.closest('.char-select-card');
+            let customInput = card.querySelector('.potion-custom-input');
+            if (selectElem.value === 'Custom Item') {
+                customInput.classList.remove('hidden');
+            } else {
+                customInput.classList.add('hidden');
+            }
+            saveData();
+        }
+
+        function addPotionSlot(selectedType = 'Heiltrank (1W4+4)', count = 1, customName = '') {
             let list = document.getElementById('potions-container');
             if (!list) return;
             let row = document.createElement('div');
             row.className = 'char-select-card';
             row.style.marginBottom = '6px';
             row.style.padding = '8px';
+            row.style.flexDirection = 'column';
+            row.style.alignItems = 'stretch';
+            
+            let isCustom = (selectedType === 'Custom Item');
+
             row.innerHTML = `
-                <div style="flex-grow: 1; margin-right: 8px;">
-                    <select class="potion-type" onchange="saveData()">
-                        <option value="Heiltrank (1W4+4)" ${selectedType==='Heiltrank (1W4+4)'?'selected':''}>🧪 Heiltrank (1W4+4)</option>
-                        <option value="Großer Heiltrank (2W4+2)" ${selectedType==='Großer Heiltrank (2W4+2)'?'selected':''}>🧪 Großer Heiltrank (2W4+2)</option>
-                        <option value="Überlegener Heiltrank (4W4+4)" ${selectedType==='Überlegener Heiltrank (4W4+4)'?'selected':''}>🧪 Überlegener Heiltrank (4W4+4)</option>
-                        <option value="Höchster Heiltrank (8W4+8)" ${selectedType==='Höchster Heiltrank (8W4+8)'?'selected':''}>🧪 Höchster Heiltrank (8W4+8)</option>
-                        <option value="Gegengift" ${selectedType==='Gegengift'?'selected':''}>🟢 Gegengift</option>
-                        <option value="Manatrank / Arkane Essenz" ${selectedType==='Manatrank / Arkane Essenz'?'selected':''}>🔵 Manatrank / Arkane Essenz</option>
-                        <option value="Custom Item" ${selectedType==='Custom Item'?'selected':''}>✨ Eigenes Item</option>
-                    </select>
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                    <div style="flex-grow: 1;">
+                        <select class="potion-type" onchange="onPotionTypeChange(this)">
+                            <option value="Heiltrank (1W4+4)" ${selectedType==='Heiltrank (1W4+4)'?'selected':''}>🧪 Heiltrank (1W4+4)</option>
+                            <option value="Großer Heiltrank (2W4+2)" ${selectedType==='Großer Heiltrank (2W4+2)'?'selected':''}>🧪 Großer Heiltrank (2W4+2)</option>
+                            <option value="Überlegener Heiltrank (4W4+4)" ${selectedType==='Überlegener Heiltrank (4W4+4)'?'selected':''}>🧪 Überlegener Heiltrank (4W4+4)</option>
+                            <option value="Höchster Heiltrank (8W4+8)" ${selectedType==='Höchster Heiltrank (8W4+8)'?'selected':''}>🧪 Höchster Heiltrank (8W4+8)</option>
+                            <option value="Gegengift" ${selectedType==='Gegengift'?'selected':''}>🟢 Gegengift</option>
+                            <option value="Manatrank / Arkane Essenz" ${selectedType==='Manatrank / Arkane Essenz'?'selected':''}>🔵 Manatrank / Arkane Essenz</option>
+                            <option value="Tagesrationen" ${selectedType==='Tagesrationen'?'selected':''}>🍖 Tagesrationen</option>
+                            <option value="Schlafsack & Decke" ${selectedType==='Schlafsack & Decke'?'selected':''}>⛺ Schlafsack & Decke</option>
+                            <option value="Fackeln" ${selectedType==='Fackeln'?'selected':''}>🔥 Fackeln</option>
+                            <option value="Hanfseil (15m)" ${selectedType==='Hanfseil (15m)'?'selected':''}>🪢 Hanfseil (15m)</option>
+                            <option value="Zunderbüchse" ${selectedType==='Zunderbüchse'?'selected':''}>🕯️ Zunderbüchse</option>
+                            <option value="Kräuter & Heilsalbe" ${selectedType==='Kräuter & Heilsalbe'?'selected':''}>🌿 Kräuter & Heilsalbe</option>
+                            <option value="Pfeile / Bolzen" ${selectedType==='Pfeile / Bolzen'?'selected':''}>🏹 Pfeile / Bolzen</option>
+                            <option value="Custom Item" ${selectedType==='Custom Item'?'selected':''}>✨ Eigenes Item (Freitext)</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <button type="button" class="btn-rest" onclick="adjustPotionRow(this, -1)" style="padding: 4px 8px;">-</button>
+                        <input type="number" class="potion-count" value="${count}" oninput="saveData()" style="width: 45px; padding: 4px;">
+                        <button type="button" class="btn-rest" onclick="adjustPotionRow(this, 1)" style="padding: 4px 8px;">+</button>
+                        <button type="button" class="btn-remove" onclick="this.closest('.char-select-card').remove(); saveData();" style="width: 28px;">✕</button>
+                    </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 6px;">
-                    <button type="button" class="btn-rest" onclick="adjustPotionRow(this, -1)" style="padding: 4px 8px;">-</button>
-                    <input type="number" class="potion-count" value="${count}" oninput="saveData()" style="width: 45px; padding: 4px;">
-                    <button type="button" class="btn-rest" onclick="adjustPotionRow(this, 1)" style="padding: 4px 8px;">+</button>
-                    <button type="button" class="btn-remove" onclick="this.closest('.char-select-card').remove(); saveData();" style="width: 28px;">✕</button>
-                </div>
+                <input type="text" class="potion-custom-input ${isCustom ? '' : 'hidden'}" placeholder="Name deines Gegenstands..." value="${customName}" oninput="saveData()" style="margin-top: 6px; text-align: left; font-size: 0.8rem; padding: 5px;">
             `;
             list.appendChild(row);
         }
@@ -2602,9 +2623,11 @@
             document.querySelectorAll('#potions-container .char-select-card').forEach(card => {
                 let pType = card.querySelector('.potion-type');
                 let pCount = card.querySelector('.potion-count');
+                let pCustom = card.querySelector('.potion-custom-input');
                 potions.push({
                     type: pType ? pType.value : '',
-                    count: pCount ? pCount.value : '1'
+                    count: pCount ? pCount.value : '1',
+                    customName: pCustom ? pCustom.value : ''
                 });
             });
             data.potions = potions;
