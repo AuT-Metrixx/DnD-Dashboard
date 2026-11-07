@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.6.1</title>
+    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.6.2</title>
     <!-- Firebase SDK (Cloud Live Sync) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -450,6 +450,37 @@
             color: #fc8181;
         }
 
+        /* DEATH SAVING THROWS STYLING */
+        .death-saves-box {
+            background: #11151d;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px;
+            margin-top: 10px;
+        }
+        .death-saves-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+        .death-checks {
+            display: flex;
+            gap: 8px;
+        }
+        .death-checks label {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            color: var(--text-muted);
+            margin: 0;
+            text-transform: none;
+        }
+
         .slot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
         .slot-box { background: #11151d; border: 1px solid var(--border-color); border-radius: 6px; padding: 6px; text-align: center; }
         .slot-box label { font-size: 0.65rem; }
@@ -562,6 +593,7 @@
         .badge-rage { background: #422026; color: #fc8181; border: 1px solid #e53e3e; }
         .badge-conc { background: #232136; color: #d8b4fe; border: 1px solid #a855f7; }
         .badge-cond { background: #381a1a; color: #f87171; border: 1px solid #ef4444; }
+        .badge-death { background: #3c1618; color: #fca5a5; border: 1px solid #dc2626; }
 
         .dm-note-box {
             margin-top: 8px;
@@ -876,7 +908,28 @@
                 <input type="checkbox" id="auto-ac-toggle" onchange="updateAllCalculations(); saveData();" style="accent-color: var(--pos-color); width: 16px; height: 16px; cursor: pointer;">
             </div>
 
-            <label class="field-left" style="margin-top: 8px;">Aktive Zustände & Effekte (Sichtbar für DM)</label>
+            <!-- TODESRETTUNGSWÜRFE (DEATH SAVING THROWS) -->
+            <div class="death-saves-box">
+                <div style="font-size: 0.75rem; color: var(--accent); text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">💀 Todesrettungswürfe (Death Saves)</div>
+                <div class="death-saves-row">
+                    <span style="color: var(--pos-color);">Erfolge:</span>
+                    <div class="death-checks">
+                        <label><input type="checkbox" id="death-success-1" onchange="saveData()" style="accent-color: var(--pos-color);"> 1</label>
+                        <label><input type="checkbox" id="death-success-2" onchange="saveData()" style="accent-color: var(--pos-color);"> 2</label>
+                        <label><input type="checkbox" id="death-success-3" onchange="saveData()" style="accent-color: var(--pos-color);"> 3</label>
+                    </div>
+                </div>
+                <div class="death-saves-row" style="margin-top: 6px;">
+                    <span style="color: var(--neg-color);">Misserfolge:</span>
+                    <div class="death-checks">
+                        <label><input type="checkbox" id="death-fail-1" onchange="saveData()" style="accent-color: var(--neg-color);"> 1</label>
+                        <label><input type="checkbox" id="death-fail-2" onchange="saveData()" style="accent-color: var(--neg-color);"> 2</label>
+                        <label><input type="checkbox" id="death-fail-3" onchange="saveData()" style="accent-color: var(--neg-color);"> 3</label>
+                    </div>
+                </div>
+            </div>
+
+            <label class="field-left" style="margin-top: 10px;">Aktive Zustände & Effekte (Sichtbar für DM)</label>
             <div class="status-toggle-grid">
                 <button type="button" class="status-chip" id="cond-poisoned" onclick="toggleCondition('poisoned')">☣️ Vergiftet</button>
                 <button type="button" class="status-chip" id="cond-stunned" onclick="toggleCondition('stunned')">💫 Betäubt</button>
@@ -1062,7 +1115,7 @@
         </div>
     </div>
 
-    <div class="version-badge" onclick="openChangelogModal()">v0.6.1 Custom Consumable Inputs</div>
+    <div class="version-badge" onclick="openChangelogModal()">v0.6.2 Death Saving Throws</div>
 
     <!-- LEVEL UP MODAL -->
     <div id="levelup-modal" class="modal-overlay hidden">
@@ -1082,14 +1135,14 @@
     <div id="changelog-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Version 0.6.1 - Changelog</h2>
+                <h2>Version 0.6.2 - Changelog</h2>
                 <button type="button" class="modal-close" onclick="closeChangelogModal()">✕</button>
             </div>
             <div class="changelog-item">
-                <h4>📦 Eigene Verbrauchsgegenstände & Vorräte</h4>
+                <h4>💀 Todesrettungswürfe (Death Saves)</h4>
                 <ul>
-                    <li><strong>Dynamisches Textfeld:</strong> Bei Auswahl von "Eigenes Item" erscheint direkt ein Freitext-Eingabefeld.</li>
-                    <li><strong>Neue Schnellauswahl-Vorräte:</strong> Tagesrationen, Fackeln, Schlafsack, Hanfseil, Zunderbüchse, Kräuter, Pfeile/Bolzen etc. hinzugefügt.</li>
+                    <li><strong>Live-Tracking:</strong> Erfolge und Misserfolge (jeweils 1 bis 3) direkt im Charakterblatt anklickbar.</li>
+                    <li><strong>DM-Ansicht:</strong> Der Spielleiter sieht aktive Todesrettungswürfe direkt im Live-Raum.</li>
                 </ul>
             </div>
         </div>
@@ -1589,6 +1642,14 @@
                 if (hpCurr) hpCurr.value = maxHp;
                 if (hpTemp) hpTemp.value = 0;
 
+                // Todesrettungswürfe zurücksetzen
+                for (let i = 1; i <= 3; i++) {
+                    let s = document.getElementById('death-success-' + i);
+                    let f = document.getElementById('death-fail-' + i);
+                    if (s) s.checked = false;
+                    if (f) f.checked = false;
+                }
+
                 let rageCurr = document.getElementById('rage-curr');
                 let rageMax = document.getElementById('rage-max');
                 if (rageCurr && rageMax) rageCurr.value = rageMax.value;
@@ -1908,6 +1969,15 @@
                 paralyzed: document.getElementById('cond-paralyzed').classList.contains('active')
             };
 
+            let deathSaves = {
+                success1: document.getElementById('death-success-1').checked,
+                success2: document.getElementById('death-success-2').checked,
+                success3: document.getElementById('death-success-3').checked,
+                fail1: document.getElementById('death-fail-1').checked,
+                fail2: document.getElementById('death-fail-2').checked,
+                fail3: document.getElementById('death-fail-3').checked
+            };
+
             let charData = {
                 user: currentUser,
                 id: currentActiveCharId,
@@ -1917,6 +1987,7 @@
                 concentration: activeConcentration,
                 isRaging: isRaging,
                 conditions: conditions,
+                deathSaves: deathSaves,
                 level: document.getElementById('char-level').value || '1',
                 hpCurr: document.getElementById('hp-curr').value || '0',
                 hpMax: document.getElementById('hp-max').value || '0',
@@ -2009,6 +2080,14 @@
                     if (c.conditions.stunned) badgesHTML += `<span class="dm-badge badge-cond">💫 Betäubt</span>`;
                     if (c.conditions.prone) badgesHTML += `<span class="dm-badge badge-cond">🛌 Liegend</span>`;
                     if (c.conditions.paralyzed) badgesHTML += `<span class="dm-badge badge-cond">⚡ Gelähmt</span>`;
+                }
+
+                if (c.deathSaves) {
+                    let sCount = (c.deathSaves.success1 ? 1 : 0) + (c.deathSaves.success2 ? 1 : 0) + (c.deathSaves.success3 ? 1 : 0);
+                    let fCount = (c.deathSaves.fail1 ? 1 : 0) + (c.deathSaves.fail2 ? 1 : 0) + (c.deathSaves.fail3 ? 1 : 0);
+                    if (sCount > 0 || fCount > 0 || hpCurr <= 0) {
+                        badgesHTML += `<span class="dm-badge badge-death">💀 Todeswürfe: ✅ ${sCount}/3 | ❌ ${fCount}/3</span>`;
+                    }
                 }
 
                 partyHTML += `
@@ -2276,6 +2355,15 @@
                     let btn = document.getElementById('cond-' + cond);
                     if (btn) btn.classList.toggle('active', !!data.conditions[cond]);
                 });
+            }
+
+            if (data.deathSaves) {
+                for (let i = 1; i <= 3; i++) {
+                    let s = document.getElementById('death-success-' + i);
+                    let f = document.getElementById('death-fail-' + i);
+                    if (s) s.checked = !!data.deathSaves['success' + i];
+                    if (f) f.checked = !!data.deathSaves['fail' + i];
+                }
             }
 
             updateRageButtonText();
@@ -2581,6 +2669,15 @@
                 stunned: document.getElementById('cond-stunned').classList.contains('active'),
                 prone: document.getElementById('cond-prone').classList.contains('active'),
                 paralyzed: document.getElementById('cond-paralyzed').classList.contains('active')
+            };
+
+            data.deathSaves = {
+                success1: document.getElementById('death-success-1').checked,
+                success2: document.getElementById('death-success-2').checked,
+                success3: document.getElementById('death-success-3').checked,
+                fail1: document.getElementById('death-fail-1').checked,
+                fail2: document.getElementById('death-fail-2').checked,
+                fail3: document.getElementById('death-fail-3').checked
             };
 
             let weapons = [];
