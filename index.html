@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.6.5</title>
+    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.6.6</title>
     <!-- Firebase SDK (Cloud Live Sync) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -572,6 +572,7 @@
         .badge-cond { background: #381a1a; color: #f87171; border: 1px solid #ef4444; }
         .badge-death { background: #3c1618; color: #fca5a5; border: 1px solid #dc2626; }
         .badge-res { background: #162a22; color: #6ee7b7; border: 1px solid #10b981; }
+        .badge-init { background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; }
 
         .dm-note-box {
             margin-top: 8px;
@@ -682,7 +683,7 @@
         }
         .changelog-item { margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #202632; }
         .changelog-item h4 { margin: 0 0 4px 0; color: var(--pos-color); font-size: 0.85rem; }
-        .changelog-item ul { margin: 0; padding-left: 18px; font-size: 0.8rem; color: var(--text-muted); }
+        .changelog-item ul { margin: 0; padding-left: 18px; font-size: 0.80rem; color: var(--text-muted); }
         .changelog-item li { margin-bottom: 3px; }
 
         .hidden { display: none !important; }
@@ -797,7 +798,6 @@
                 </div>
             </div>
 
-            <!-- NEU: START-TALENT (ORIGIN FEAT) -->
             <div class="grid-2" style="margin-bottom: 10px;">
                 <div class="field-left">
                     <label>Start-Talent (Origin Feat 2024)</label>
@@ -922,7 +922,6 @@
             </div>
         </div>
 
-        <!-- NEU: RASSEN- & KLASSEN-FÄHIGKEITEN + RESISTENZEN -->
         <div class="section">
             <div class="section-title">Fähigkeiten, Merkmale & Resistenzen</div>
             <div class="field-left" style="margin-bottom: 8px;">
@@ -945,7 +944,16 @@
             </div>
             <div class="grid-4" style="margin-bottom: 10px;">
                 <div class="stat-box"><label>Übungsbonus (PB)</label><input type="number" id="pb" value="3" oninput="updateAllCalculations(); saveData();"></div>
-                <div class="stat-box"><label>Initiative</label><input type="number" id="init" value="2" oninput="saveData()"></div>
+                
+                <!-- NEU: INITIATIVE MIT WÜRFEL-BUTTON -->
+                <div class="stat-box" style="position: relative;">
+                    <label style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>Initiative</span>
+                        <span onclick="rollInitiativeDice()" style="color: var(--pos-color); cursor:pointer; font-size:0.75rem;" title="1W20 + DEX-Mod würfeln">🎲 Würfeln</span>
+                    </label>
+                    <input type="number" id="init" value="2" oninput="saveData()" style="margin-top: 2px;">
+                </div>
+
                 <div class="stat-box"><label>Tempo (Geschw.)</label><input type="text" id="speed" value="9m / 30ft" oninput="saveData()" style="text-align:center;"></div>
                 <div class="stat-box"><label>Passive Wahrn.</label><input type="number" id="passive-perception" value="10" oninput="saveData()"></div>
             </div>
@@ -1181,7 +1189,7 @@
         </div>
     </div>
 
-    <div class="version-badge" onclick="openChangelogModal()">v0.6.5 Origin Feats & Expertise</div>
+    <div class="version-badge" onclick="openChangelogModal()">v0.6.6 Initiative Dice Roll</div>
 
     <!-- LEVEL UP MODAL -->
     <div id="levelup-modal" class="modal-overlay hidden">
@@ -1201,15 +1209,14 @@
     <div id="changelog-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Version 0.6.5 - Changelog</h2>
+                <h2>Version 0.6.6 - Changelog</h2>
                 <button type="button" class="modal-close" onclick="closeChangelogModal()">✕</button>
             </div>
             <div class="changelog-item">
-                <h4>⭐ Neue Features in v0.6.5</h4>
+                <h4>🎲 Initiative-Würfel & Sync</h4>
                 <ul>
-                    <li><strong>Origin Feats (Start-Talente):</strong> Wähle dein 2024er Start-Talent (Tough, Alert, Lucky etc.) mit Details.</li>
-                    <li><strong>Fertigkeits-Expertise (Exp):</strong> Aktiviere doppelten Übungsbonus für Fertigkeiten.</li>
-                    <li><strong>Resistenzen & Merkmale:</strong> Trage Resistenzen ein (werden an den DM gesynct) sowie rassen-/klassenspezifische Features.</li>
+                    <li><strong>Würfel-Button:</strong> Klicke direkt beim Initiative-Feld auf "🎲 Würfeln", um 1W20 + deinen DEX-Modifikator zu ermitteln.</li>
+                    <li><strong>DM-Ansicht:</strong> Der gewürfelte Initiative-Wert wird direkt im DM-Dashboard als Badge angezeigt.</li>
                 </ul>
             </div>
         </div>
@@ -1323,6 +1330,20 @@
                 return classLevelFeatures[clazz][lvl];
             }
             return `Neue Klassen-Fähigkeiten, Attributsverbesserung (ASI) oder Zaubergrad-Steigerung für Stufe ${lvl}.`;
+        }
+
+        function rollInitiativeDice() {
+            let dexVal = parseInt(document.getElementById('dex').value) || 10;
+            let dexMod = Math.floor((dexVal - 10) / 2);
+            let d20 = Math.floor(Math.random() * 20) + 1;
+            let totalInit = d20 + dexMod;
+
+            let initField = document.getElementById('init');
+            if (initField) {
+                initField.value = totalInit;
+            }
+            saveData();
+            alert(`🎲 Initiative-Wurf: ${d20} (W20) ${dexMod >= 0 ? '+' + dexMod : dexMod} (DEX) = ${totalInit}`);
         }
 
         function onOriginFeatSelectChange() {
@@ -2107,6 +2128,7 @@
                 resistances: document.getElementById('char-resistances').value || '',
                 clazz: charClassEl ? charClassEl.value : 'Unbekannt',
                 subclass: document.getElementById('char-subclass').value || '',
+                initiative: document.getElementById('init').value || '0',
                 concentration: activeConcentration,
                 isRaging: isRaging,
                 conditionsList: activeConditions,
@@ -2183,6 +2205,7 @@
                 let level = c.level || '1';
                 let subclass = c.subclass || '';
                 let resistances = c.resistances || '';
+                let initiative = c.initiative !== undefined ? c.initiative : '0';
                 let hpCurr = c.hpCurr !== undefined ? parseInt(c.hpCurr) : 0;
                 let hpMax = c.hpMax !== undefined ? parseInt(c.hpMax) : 1;
                 let ac = c.ac !== undefined ? c.ac : '10';
@@ -2196,7 +2219,7 @@
 
                 let userTag = c.user ? ` <span style="font-size:0.75rem; color: var(--accent);">[${c.user.toUpperCase()}]</span>` : '';
 
-                let badgesHTML = '';
+                let badgesHTML = `<span class="dm-badge badge-init">⚡ Initiative: ${initiative}</span>`;
                 if (c.isRaging) badgesHTML += `<span class="dm-badge badge-rage">🔥 Wut aktiv</span>`;
                 if (c.concentration) badgesHTML += `<span class="dm-badge badge-conc">🔮 Konz: ${c.concentration}</span>`;
 
@@ -2224,7 +2247,7 @@
                         <div class="party-card-top">
                             <div class="party-info">
                                 <h3>${name}${userTag}</h3>
-                                <p>${species ? species + ' • ' : ''}${clazz} (${level})</p>
+                                <p>${species ? species + ' • ' : ''}${clazz} (${level}) • Initiative: <strong>${initiative}</strong></p>
                             </div>
                             <div class="party-stats">
                                 <div class="party-stat-box"><label>HP</label><span style="color: ${hpColor};">${hpCurr}/${hpMax}</span></div>
@@ -2245,10 +2268,10 @@
                                 <p>Sub: ${subclass || '-'}</p>
                             </div>
                             <div class="party-stats">
+                                <div class="party-stat-box"><label>Init</label><span style="color: #38bdf8;">${initiative}</span></div>
                                 <div class="party-stat-box"><label>HP</label><span style="color: ${hpColor};">${hpCurr}/${hpMax}</span></div>
                                 <div class="party-stat-box"><label>RK</label><span>${ac}</span></div>
                                 <div class="party-stat-box"><label>Tempo</label><span>${speed}</span></div>
-                                <div class="party-stat-box"><label>Pass.W</label><span>${pp}</span></div>
                                 <button type="button" class="btn-remove" onclick="dmKickCharacter('${charKey}')" title="Aus Raum kicken" style="margin-left: 6px; width: 28px;">✕</button>
                             </div>
                         </div>
@@ -2416,7 +2439,7 @@
                     id: newId, name: 'Zar´thul Rocgarn', species: 'Drachenblütiger (Messing)', background: 'Bauer / Farmer',
                     'char-origin-feat-select': 'Tough (Zähigkeit)', 'char-origin-feat-custom': 'Tough (+2 HP pro Stufe)',
                     clazz: 'Barbar', subclass: 'Pfad des Weltenbaums', level: '6',
-                    'hp-curr': '59', 'hp-max': '59', 'hp-temp': '0', 'ac': '15', 'speed': '12m', 'passive-perception': '13',
+                    'hp-curr': '59', 'hp-max': '59', 'hp-temp': '0', 'ac': '15', 'speed': '12m', 'passive-perception': '13', 'init': '5',
                     'char-resistances': 'Feuer (Messingdrache), Wucht/Stich/Hieb (Wut)',
                     'char-features-text': 'Atemwaffe (Messing: Feuer-Kegel W6s), Danger Sense, Reckless Attack, Vitalität des Weltenbaums (Temp-HP)',
                     'str': '16', 'dex': '14', 'con': '16', 'int': '8', 'wis': '10', 'cha': '10',
@@ -2432,7 +2455,7 @@
                     id: newId, name: 'Malakor der Paktgebundene', species: 'Tiefling', background: 'Weiser',
                     'char-origin-feat-select': 'Magic Initiate (Magiebegabt)', 'char-origin-feat-custom': 'Magic Initiate (Hexenmeister Spells)',
                     clazz: 'Hexenmeister', subclass: 'Der Unterweltler', level: '6',
-                    'hp-curr': '45', 'hp-max': '45', 'hp-temp': '0', 'ac': '14', 'speed': '9m', 'passive-perception': '11',
+                    'hp-curr': '45', 'hp-max': '45', 'hp-temp': '0', 'ac': '14', 'speed': '9m', 'passive-perception': '11', 'init': '2',
                     'char-resistances': 'Feuer (Hellish Resistance)',
                     'char-features-text': 'Dunkelsicht 18m, Pakt der Klinge, Segen des Unterweltlers (Temp HP bei Kill)',
                     'str': '8', 'dex': '14', 'con': '14', 'int': '10', 'wis': '12', 'cha': '18',
@@ -2447,7 +2470,7 @@
                     id: newId, name: 'Boren der Stille', species: 'Elf', background: 'Straßenkind',
                     'char-origin-feat-select': 'Alert (Wachsamkeit)', 'char-origin-feat-custom': 'Alert (+PB auf Init & Swap)',
                     clazz: 'Mönch', subclass: 'Weg der Offenen Hand', level: '6',
-                    'hp-curr': '52', 'hp-max': '52', 'hp-temp': '0', 'ac': '16', 'speed': '13.5m', 'passive-perception': '16',
+                    'hp-curr': '52', 'hp-max': '52', 'hp-temp': '0', 'ac': '16', 'speed': '13.5m', 'passive-perception': '16', 'init': '7',
                     'char-features-text': 'Dunkelsicht 18m, Unbewaffneter Kampf d6, Ki-Schläge, Geschoss abwehren',
                     'str': '10', 'dex': '18', 'con': '14', 'int': '10', 'wis': '16', 'cha': '8',
                     'skill-stealth': true, 'exp-skill-stealth': true,
@@ -2459,7 +2482,7 @@
                     id: newId, name: 'Sir Alden', species: 'Mensch', background: 'Soldat',
                     'char-origin-feat-select': 'Savage Attacker (Wilder Angreifer)', 'char-origin-feat-custom': 'Savage Attacker (Max Dmg Roll)',
                     clazz: 'Kämpfer', subclass: 'Meister des Kampfs (Battle Master)', level: '6',
-                    'hp-curr': '60', 'hp-max': '60', 'hp-temp': '0', 'ac': '18', 'speed': '9m', 'passive-perception': '14',
+                    'hp-curr': '60', 'hp-max': '60', 'hp-temp': '0', 'ac': '18', 'speed': '9m', 'passive-perception': '14', 'init': '0',
                     'char-features-text': 'Aktionsschub, Durchschnaufen, Überlegenheitsmanöver (Riposte, Menacing Attack)',
                     'str': '18', 'dex': '10', 'con': '16', 'int': '10', 'wis': '12', 'cha': '10',
                     weapons: [{ name: 'Großschwert +1', stat: 'str', prof: true, magic: '1', dice: '2W6' }],
