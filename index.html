@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.5.7</title>
+    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.5.8</title>
     <!-- Firebase SDK (Cloud Live Sync) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -736,7 +736,7 @@
         </div>
         <div id="sync-status" style="font-size: 0.8rem; color: var(--text-muted); padding: 8px; text-align: center; background: #11151d; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 12px;">Kein Raum verbunden</div>
 
-        <div class="section-title">Deine Helden-Charaktere</div>
+        <div class="section-title">Deine Helden-Charaktere (Cloud Sync aktiv ☁️)</div>
         <div id="character-list-container"></div>
         <button type="button" class="btn-add" style="margin-top: 10px;" onclick="createNewCharacter()">+ Neuen Charakter erstellen</button>
     </div>
@@ -1062,7 +1062,7 @@
         </div>
     </div>
 
-    <div class="version-badge" onclick="openChangelogModal()">v0.5.7 Level-Up Guide Added</div>
+    <div class="version-badge" onclick="openChangelogModal()">v0.5.8 Cloud Character Sync</div>
 
     <!-- LEVEL UP POPUP MODAL -->
     <div id="levelup-modal" class="modal-overlay hidden">
@@ -1084,15 +1084,14 @@
     <div id="changelog-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Version 0.5.7 - Changelog</h2>
+                <h2>Version 0.5.8 - Changelog</h2>
                 <button type="button" class="modal-close" onclick="closeChangelogModal()">✕</button>
             </div>
             <div class="changelog-item">
-                <h4>✨ Level Up & Klassen-Features Popup</h4>
+                <h4>☁️ Cloud-Synchronisation für Charaktere</h4>
                 <ul>
-                    <li>Neuer Level-Up-Button neben der Stufe hinzugefügt.</li>
-                    <li>Öffnet ein informatives Pop-up mit klassenspezifischen Features für die aktuelle & nächste Stufe (2024 Regeln kompatibel).</li>
-                    <li>Automatischer Stufenaufstieg per Button-Klick inklusive Ressourcen-Skalierung.</li>
+                    <li>Deine Charakter-Liste und alle Charakter-Daten werden nun direkt in Firebase unter deinem Account gespeichert.</li>
+                    <li>Egal ob PC oder Smartphone – beim Einloggen mit deinem Account sind deine Helden nun auf allen Geräten verfügbar.</li>
                 </ul>
             </div>
         </div>
@@ -1136,7 +1135,6 @@
             "Magier": ["Schule der Evokation", "Schule der Abjuration"]
         };
 
-        // KLASSEN-FEATURES DATENBANK (FÜR LEVEL UP POPUP)
         const classLevelFeatures = {
             "Barbar": {
                 1: "Rage (Wut), Unarmored Defense (Ungerüstete Rüstung), Weapon Mastery",
@@ -1355,7 +1353,7 @@
             localStorage.setItem('dnd_logged_role', role);
             document.getElementById('role-overlay').classList.add('hidden');
             setupNavigation();
-            initApp();
+            initFirebaseAndLoad();
             registerSingleSession();
         }
 
@@ -1394,7 +1392,7 @@
             
             activeRoom = code;
             localStorage.setItem('dnd_active_room_' + currentUser, code);
-            initCloudSync();
+            initRoomSync();
             renderCharacterList();
             alert("Erfolgreich dem Raum '" + code + "' beigetreten!");
         }
@@ -1436,7 +1434,7 @@
             let joinInput = document.getElementById('join-room-input');
             if (joinInput) joinInput.value = activeRoom;
             
-            initCloudSync();
+            initRoomSync();
             alert("👑 DM-Raum aktiv gesetzt zu: " + activeRoom);
         }
 
@@ -1806,7 +1804,6 @@
             updateAllCalculations();
         }
 
-        // LEVEL UP MODAL STEUERUNG
         function openLevelUpModal() {
             let clsEl = document.getElementById('char-class');
             let lvlEl = document.getElementById('char-level');
@@ -1855,7 +1852,6 @@
             let newLvl = currentLvl + 1;
             lvlEl.value = newLvl;
             
-            // PB automatisch anpassen (Stufe 1-4: +2, 5-8: +3, 9-12: +4, 13-16: +5, 17-20: +6)
             let newPb = Math.floor((newLvl - 1) / 4) + 2;
             let pbEl = document.getElementById('pb');
             if (pbEl) pbEl.value = newPb;
@@ -1866,7 +1862,8 @@
             alert(`🎉 Herzlichen Glückwunsch! Du bist erfolgreich auf Stufe ${newLvl} aufgestiegen!`);
         }
 
-        function initCloudSync() {
+        // FIREBASE INITIALISIERUNG & CLOUD CHARAKTER SYNCHRONISATION
+        function initFirebaseAndLoad() {
             if (!firebase.apps.length) {
                 try {
                     firebase.initializeApp(firebaseConfig);
@@ -1875,31 +1872,64 @@
                 } catch (e) { isCloudActive = false; }
             }
 
-            if (isCloudActive && db) {
-                if (!activeRoom) {
-                    updateRoomStatusUI();
-                    return;
-                }
-
-                if (activeRoomListener) {
-                    db.ref('rooms/' + activeRoom).off('value', activeRoomListener);
-                }
-
-                updateRoomStatusUI();
-
-                activeRoomListener = db.ref('rooms/' + activeRoom).on('value', (snapshot) => {
-                    let data = snapshot.val();
-                    renderPartyViews(data);
-                    if (currentRole === 'player') renderCharacterList();
-                }, (error) => {
-                    let debugBox = document.getElementById('dm-debug-box');
-                    if (debugBox) debugBox.innerText = `Firebase Fehler: ${error.message}`;
+            if (isCloudActive && db && currentUser) {
+                // Lade Account-Daten aus der Cloud
+                db.ref('user_characters/' + currentUser).once('value', (snapshot) => {
+                    let cloudChars = snapshot.val();
+                    if (cloudChars) {
+                        localStorage.setItem('dnd_characters_index_' + currentUser, JSON.stringify(cloudChars));
+                    }
+                    finishInitLoginSequence();
                 });
-
-                if (currentUser) registerSingleSession();
             } else {
-                updateRoomStatusUI();
+                finishInitLoginSequence();
             }
+        }
+
+        function finishInitLoginSequence() {
+            let savedRoom = localStorage.getItem('dnd_active_room_' + currentUser);
+            if (savedRoom) {
+                activeRoom = savedRoom;
+                let joinInput = document.getElementById('join-room-input');
+                let dmInput = document.getElementById('dm-room-code-input');
+                if (joinInput) joinInput.value = activeRoom;
+                if (dmInput) dmInput.value = activeRoom;
+            }
+
+            if (currentRole === 'player') {
+                let chars = getCharactersList();
+                if (chars.length === 0) {
+                    let presetId = loadDefaultPresetForUser(currentUser);
+                    if (!presetId) {
+                        createNewCharacter();
+                        chars = getCharactersList();
+                    }
+                }
+
+                chars = getCharactersList();
+                let lastChar = localStorage.getItem('dnd_active_char_' + currentUser) || (chars[0] ? chars[0].id : null);
+                if (!lastChar && chars.length > 0) lastChar = chars[0].id;
+                currentActiveCharId = lastChar;
+                
+                if (activeRoom) initRoomSync();
+                switchMode('lobby');
+            } else {
+                if (activeRoom) initRoomSync();
+                switchMode('dm');
+            }
+        }
+
+        function initRoomSync() {
+            if (!isCloudActive || !db || !activeRoom) return;
+            if (activeRoomListener) {
+                db.ref('rooms/' + activeRoom).off('value', activeRoomListener);
+            }
+            updateRoomStatusUI();
+            activeRoomListener = db.ref('rooms/' + activeRoom).on('value', (snapshot) => {
+                let data = snapshot.val();
+                renderPartyViews(data);
+                if (currentRole === 'player') renderCharacterList();
+            });
         }
 
         function pushCharacterToCloud() {
@@ -2120,6 +2150,10 @@
 
         function saveCharactersList(list) {
             localStorage.setItem('dnd_characters_index_' + currentUser, JSON.stringify(list));
+            // SYNCHRONISIERE CHARAKTER-LISTE IN DIE CLOUD
+            if (isCloudActive && db && currentUser) {
+                db.ref('user_characters/' + currentUser).set(list);
+            }
         }
 
         function renderCharacterList() {
@@ -2183,6 +2217,9 @@
                 weapons: [], potions: []
             };
             localStorage.setItem('dnd_sheet_data_' + currentUser + '_' + newId, JSON.stringify(emptySheetData));
+            if (isCloudActive && db && currentUser) {
+                db.ref('user_sheets/' + currentUser + '/' + newId).set(emptySheetData);
+            }
 
             loadCharacterData(newId);
             if (activeRoom) pushCharacterToCloud();
@@ -2192,8 +2229,21 @@
         function loadCharacter(charId) {
             currentActiveCharId = charId;
             localStorage.setItem('dnd_active_char_' + currentUser, charId);
-            loadCharacterData(charId);
-            switchMode('sheet');
+            
+            // Versuche Sheet von Cloud zu laden falls lokal nicht vorhanden
+            if (isCloudActive && db && currentUser) {
+                db.ref('user_sheets/' + currentUser + '/' + charId).once('value', (snapshot) => {
+                    let cloudSheet = snapshot.val();
+                    if (cloudSheet) {
+                        localStorage.setItem('dnd_sheet_data_' + currentUser + '_' + charId, JSON.stringify(cloudSheet));
+                    }
+                    loadCharacterData(charId);
+                    switchMode('sheet');
+                });
+            } else {
+                loadCharacterData(charId);
+                switchMode('sheet');
+            }
         }
 
         function loadDefaultPresetForUser(user) {
@@ -2241,6 +2291,9 @@
             if (preset) {
                 saveCharactersList([{ id: preset.id, name: preset.name, clazz: preset.clazz, subclass: preset.subclass, level: preset.level }]);
                 localStorage.setItem('dnd_sheet_data_' + user + '_' + preset.id, JSON.stringify(preset));
+                if (isCloudActive && db && currentUser) {
+                    db.ref('user_sheets/' + user + '/' + preset.id).set(preset);
+                }
                 return preset.id;
             }
             return null;
@@ -2575,6 +2628,11 @@
 
             localStorage.setItem('dnd_sheet_data_' + currentUser + '_' + currentActiveCharId, JSON.stringify(data));
 
+            // SPEICHERE CHARAKTER SHEET DIRECT IN FIREBASE
+            if (isCloudActive && db && currentUser) {
+                db.ref('user_sheets/' + currentUser + '/' + currentActiveCharId).set(data);
+            }
+
             let chars = getCharactersList();
             let cIndex = chars.findIndex(c => c.id === currentActiveCharId);
             let nameEl = document.getElementById('char-name');
@@ -2602,38 +2660,6 @@
             }
         }
 
-        function initApp() {
-            let savedRoom = localStorage.getItem('dnd_active_room_' + currentUser);
-            if (savedRoom) {
-                activeRoom = savedRoom;
-                let joinInput = document.getElementById('join-room-input');
-                let dmInput = document.getElementById('dm-room-code-input');
-                if (joinInput) joinInput.value = activeRoom;
-                if (dmInput) dmInput.value = activeRoom;
-            }
-
-            if (currentRole === 'player') {
-                let chars = getCharactersList();
-                if (chars.length === 0) {
-                    let presetId = loadDefaultPresetForUser(currentUser);
-                    if (!presetId) {
-                        createNewCharacter();
-                        chars = getCharactersList();
-                    }
-                }
-
-                chars = getCharactersList();
-                let lastChar = localStorage.getItem('dnd_active_char_' + currentUser) || (chars[0] ? chars[0].id : null);
-                if (!lastChar && chars.length > 0) lastChar = chars[0].id;
-                currentActiveCharId = lastChar;
-                initCloudSync();
-                switchMode('lobby');
-            } else {
-                initCloudSync();
-                switchMode('dm');
-            }
-        }
-
         let savedUser = localStorage.getItem('dnd_logged_user');
         let savedRole = localStorage.getItem('dnd_logged_role');
         if (savedUser && savedRole) {
@@ -2642,7 +2668,7 @@
             let loginOverlay = document.getElementById('login-overlay');
             if (loginOverlay) loginOverlay.classList.add('hidden');
             setupNavigation();
-            initApp();
+            initFirebaseAndLoad();
         }
     </script>
 </body>
