@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.6.6</title>
+    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.6.7</title>
     <!-- Firebase SDK (Cloud Live Sync) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -573,6 +573,7 @@
         .badge-death { background: #3c1618; color: #fca5a5; border: 1px solid #dc2626; }
         .badge-res { background: #162a22; color: #6ee7b7; border: 1px solid #10b981; }
         .badge-init { background: #1e293b; color: #38bdf8; border: 1px solid #0284c7; }
+        .badge-insp { background: #3d2e11; color: #fde047; border: 1px solid #eab308; }
 
         .dm-note-box {
             margin-top: 8px;
@@ -686,6 +687,26 @@
         .changelog-item ul { margin: 0; padding-left: 18px; font-size: 0.80rem; color: var(--text-muted); }
         .changelog-item li { margin-bottom: 3px; }
 
+        .hp-quick-row {
+            display: flex;
+            gap: 2px;
+            margin-top: 4px;
+            justify-content: center;
+        }
+        .hp-quick-btn {
+            background: #161a22;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 0.6rem;
+            padding: 2px 4px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .hp-quick-btn.minus { color: #f87171; border-color: #422026; }
+        .hp-quick-btn.plus { color: #6ee7b7; border-color: #162a22; }
+        .hp-quick-btn:hover { background: #202632; color: var(--text-color); }
+
         .hidden { display: none !important; }
     </style>
 </head>
@@ -760,9 +781,14 @@
         </div>
 
         <div class="section">
-            <div class="field-left" style="margin-bottom: 10px;">
-                <label>Name</label>
-                <input type="text" id="char-name" value="Zar´thul Rocgarn" placeholder="Charaktername" oninput="saveData()">
+            <div style="display: flex; gap: 8px; align-items: flex-end; margin-bottom: 10px;">
+                <div class="field-left" style="flex-grow: 1; margin: 0;">
+                    <label>Name</label>
+                    <input type="text" id="char-name" value="Zar´thul Rocgarn" placeholder="Charaktername" oninput="saveData()">
+                </div>
+                <div>
+                    <button type="button" id="btn-inspiration" class="btn-rest" onclick="toggleInspiration()" style="height: 41px; background: #11151d; border-color: var(--border-color); color: var(--text-muted); font-size: 0.75rem;" title="Inspiration (Vorteil auf Wurf)">🌟 Inspiration</button>
+                </div>
             </div>
             
             <div class="grid-2" style="margin-bottom: 10px;">
@@ -937,7 +963,18 @@
         <div class="section">
             <div class="section-title">Kampfwerte & Status</div>
             <div class="grid-4" style="margin-bottom: 10px;">
-                <div class="stat-box"><label>Aktuelle HP</label><input type="number" id="hp-curr" value="59" oninput="saveData()"></div>
+                <div class="stat-box">
+                    <label>Aktuelle HP</label>
+                    <input type="number" id="hp-curr" value="59" oninput="saveData()" style="margin-bottom: 2px;">
+                    <div class="hp-quick-row">
+                        <button type="button" class="hp-quick-btn minus" onclick="adjustHP(-10)">-10</button>
+                        <button type="button" class="hp-quick-btn minus" onclick="adjustHP(-5)">-5</button>
+                        <button type="button" class="hp-quick-btn minus" onclick="adjustHP(-1)">-1</button>
+                        <button type="button" class="hp-quick-btn plus" onclick="adjustHP(1)">+1</button>
+                        <button type="button" class="hp-quick-btn plus" onclick="adjustHP(5)">+5</button>
+                        <button type="button" class="hp-quick-btn plus" onclick="adjustHP(10)">+10</button>
+                    </div>
+                </div>
                 <div class="stat-box"><label>Max HP</label><input type="number" id="hp-max" value="59" oninput="saveData()"></div>
                 <div class="stat-box"><label>Temp HP</label><input type="number" id="hp-temp" value="0" oninput="saveData()"></div>
                 <div class="stat-box"><label>Rüstung (AC)</label><input type="number" id="ac" value="15" oninput="updateAllCalculations(); saveData();"></div>
@@ -945,7 +982,7 @@
             <div class="grid-4" style="margin-bottom: 10px;">
                 <div class="stat-box"><label>Übungsbonus (PB)</label><input type="number" id="pb" value="3" oninput="updateAllCalculations(); saveData();"></div>
                 
-                <!-- NEU: INITIATIVE MIT WÜRFEL-BUTTON -->
+                <!-- INITIATIVE MIT WÜRFEL-BUTTON -->
                 <div class="stat-box" style="position: relative;">
                     <label style="display:flex; justify-content:space-between; align-items:center;">
                         <span>Initiative</span>
@@ -1189,7 +1226,7 @@
         </div>
     </div>
 
-    <div class="version-badge" onclick="openChangelogModal()">v0.6.6 Initiative Dice Roll</div>
+    <div class="version-badge" onclick="openChangelogModal()">v0.6.7 Inspiration & HP Quick</div>
 
     <!-- LEVEL UP MODAL -->
     <div id="levelup-modal" class="modal-overlay hidden">
@@ -1209,14 +1246,14 @@
     <div id="changelog-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Version 0.6.6 - Changelog</h2>
+                <h2>Version 0.6.7 - Changelog</h2>
                 <button type="button" class="modal-close" onclick="closeChangelogModal()">✕</button>
             </div>
             <div class="changelog-item">
-                <h4>🎲 Initiative-Würfel & Sync</h4>
+                <h4>🌟 Inspiration & HP-Schnellwahl</h4>
                 <ul>
-                    <li><strong>Würfel-Button:</strong> Klicke direkt beim Initiative-Feld auf "🎲 Würfeln", um 1W20 + deinen DEX-Modifikator zu ermitteln.</li>
-                    <li><strong>DM-Ansicht:</strong> Der gewürfelte Initiative-Wert wird direkt im DM-Dashboard als Badge angezeigt.</li>
+                    <li><strong>Inspirations-Button:</strong> Aktiviere Inspiration direkt neben dem Namen, um deinen Vorteil zu tracken und an den DM zu übertragen.</li>
+                    <li><strong>HP-Schnellwahltasten:</strong> Nutze die Buttons unter dem HP-Feld (`-10, -5, -1, +1, +5, +10`), um im Eifer des Gefechts sekundenschnell Schaden oder Heilung zu verrechnen.</li>
                 </ul>
             </div>
         </div>
@@ -1330,6 +1367,51 @@
                 return classLevelFeatures[clazz][lvl];
             }
             return `Neue Klassen-Fähigkeiten, Attributsverbesserung (ASI) oder Zaubergrad-Steigerung für Stufe ${lvl}.`;
+        }
+
+        function adjustHP(amount) {
+            let hpCurrInput = document.getElementById('hp-curr');
+            if (!hpCurrInput) return;
+            let current = parseInt(hpCurrInput.value) || 0;
+            let max = parseInt(document.getElementById('hp-max').value) || 1;
+            let tempInput = document.getElementById('hp-temp');
+            let temp = tempInput ? (parseInt(tempInput.value) || 0) : 0;
+
+            if (amount < 0 && temp > 0) {
+                let damage = Math.abs(amount);
+                if (temp >= damage) {
+                    tempInput.value = temp - damage;
+                    saveData();
+                    return;
+                } else {
+                    let remainingDmg = damage - temp;
+                    tempInput.value = 0;
+                    current = Math.max(0, current - remainingDmg);
+                }
+            } else {
+                current = Math.max(0, Math.min(max, current + amount));
+            }
+
+            hpCurrInput.value = current;
+            saveData();
+        }
+
+        function toggleInspiration() {
+            let btn = document.getElementById('btn-inspiration');
+            if (!btn) return;
+            let isActive = btn.classList.contains('active');
+            if (!isActive) {
+                btn.classList.add('active');
+                btn.style.background = '#3d2e11';
+                btn.style.borderColor = '#eab308';
+                btn.style.color = '#fde047';
+            } else {
+                btn.classList.remove('active');
+                btn.style.background = '#11151d';
+                btn.style.borderColor = 'var(--border-color)';
+                btn.style.color = 'var(--text-muted)';
+            }
+            saveData();
         }
 
         function rollInitiativeDice() {
@@ -2105,6 +2187,9 @@
             let charClassEl = document.getElementById('char-class');
             let isRaging = (charClassEl && charClassEl.value === "Barbar" && btnToggle && btnToggle.classList.contains('active'));
 
+            let btnInsp = document.getElementById('btn-inspiration');
+            let hasInspiration = (btnInsp && btnInsp.classList.contains('active'));
+
             let activeConditions = [];
             document.querySelectorAll('#active-conditions-container .status-chip').forEach(chip => {
                 activeConditions.push(chip.getAttribute('data-cond'));
@@ -2131,6 +2216,7 @@
                 initiative: document.getElementById('init').value || '0',
                 concentration: activeConcentration,
                 isRaging: isRaging,
+                hasInspiration: hasInspiration,
                 conditionsList: activeConditions,
                 deathSaves: deathSaves,
                 level: document.getElementById('char-level').value || '1',
@@ -2220,6 +2306,7 @@
                 let userTag = c.user ? ` <span style="font-size:0.75rem; color: var(--accent);">[${c.user.toUpperCase()}]</span>` : '';
 
                 let badgesHTML = `<span class="dm-badge badge-init">⚡ Initiative: ${initiative}</span>`;
+                if (c.hasInspiration) badgesHTML += `<span class="dm-badge badge-insp">🌟 Inspiration</span>`;
                 if (c.isRaging) badgesHTML += `<span class="dm-badge badge-rage">🔥 Wut aktiv</span>`;
                 if (c.concentration) badgesHTML += `<span class="dm-badge badge-conc">🔮 Konz: ${c.concentration}</span>`;
 
@@ -2518,6 +2605,19 @@
             let btnToggle = document.getElementById('btn-toggle-rage');
             if (data.isRaging && btnToggle) btnToggle.classList.add('active');
             else if (btnToggle) btnToggle.classList.remove('active');
+
+            let btnInsp = document.getElementById('btn-inspiration');
+            if (data.hasInspiration && btnInsp) {
+                btnInsp.classList.add('active');
+                btnInsp.style.background = '#3d2e11';
+                btnInsp.style.borderColor = '#eab308';
+                btnInsp.style.color = '#fde047';
+            } else if (btnInsp) {
+                btnInsp.classList.remove('active');
+                btnInsp.style.background = '#11151d';
+                btnInsp.style.borderColor = 'var(--border-color)';
+                btnInsp.style.color = 'var(--text-muted)';
+            }
 
             let condContainer = document.getElementById('active-conditions-container');
             if (condContainer) {
@@ -2856,6 +2956,9 @@
 
             let btnToggle = document.getElementById('btn-toggle-rage');
             data.isRaging = (btnToggle && btnToggle.classList.contains('active'));
+
+            let btnInsp = document.getElementById('btn-inspiration');
+            data.hasInspiration = (btnInsp && btnInsp.classList.contains('active'));
 
             let activeConditions = [];
             document.querySelectorAll('#active-conditions-container .status-chip').forEach(chip => {
