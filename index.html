@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.6.3</title>
+    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.6.4</title>
     <!-- Firebase SDK (Cloud Live Sync) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -426,7 +426,6 @@
         }
         .btn-action-click:hover { background: #1f3326; }
 
-        /* DEATH SAVING THROWS STYLING */
         .death-saves-box {
             background: #11151d;
             border: 1px solid var(--border-color);
@@ -761,6 +760,41 @@
                 <label>Name</label>
                 <input type="text" id="char-name" value="Zar´thul Rocgarn" placeholder="Charaktername" oninput="saveData()">
             </div>
+            
+            <!-- NEU: SPEZIES & HINTERGRUND -->
+            <div class="grid-2" style="margin-bottom: 10px;">
+                <div class="field-left">
+                    <label>Spezies / Volk</label>
+                    <select id="char-species" onchange="saveData()">
+                        <option value="Drachenblütiger (Messing)">🐉 Drachenblütiger (Messing)</option>
+                        <option value="Mensch">👤 Mensch</option>
+                        <option value="Elf">🧝 Elf</option>
+                        <option value="Zwerg">🧔 Zwerg</option>
+                        <option value="Halbling">🦶 Halbling</option>
+                        <option value="Goliath">🛡️ Goliath</option>
+                        <option value="Orc">⚔️ Orc</option>
+                        <option value="Tiefling">😈 Tiefling</option>
+                        <option value="Gnom">🔮 Gnom</option>
+                        <option value="Sonstige">✨ Sonstige (Custom)</option>
+                    </select>
+                </div>
+                <div class="field-left">
+                    <label>Hintergrund (Background)</label>
+                    <select id="char-background" onchange="saveData()">
+                        <option value="Bauer / Farmer">🌾 Bauer / Farmer</option>
+                        <option value="Akolyth">📜 Akolyth</option>
+                        <option value="Krimineller">🗡️ Krimineller</option>
+                        <option value="Weiser">📚 Weiser</option>
+                        <option value="Soldat">🛡️ Soldat</option>
+                        <option value="Straßenkind">🪙 Straßenkind</option>
+                        <option value="Einsiedler">🏔️ Einsiedler</option>
+                        <option value="Edelmann">👑 Edelmann</option>
+                        <option value="Handwerker">🔨 Handwerker</option>
+                        <option value="Sonstige">✨ Sonstiger (Custom)</option>
+                    </select>
+                </div>
+            </div>
+
             <div class="grid-3">
                 <div class="field-left">
                     <label>Klasse</label>
@@ -884,7 +918,7 @@
                 <input type="checkbox" id="auto-ac-toggle" onchange="updateAllCalculations(); saveData();" style="accent-color: var(--pos-color); width: 16px; height: 16px; cursor: pointer;">
             </div>
 
-            <!-- TODESRETTUNGSWÜRFE (DEATH SAVING THROWS) -->
+            <!-- TODESRETTUNGSWÜRFE -->
             <div class="death-saves-box">
                 <div style="font-size: 0.75rem; color: var(--accent); text-transform: uppercase; font-weight: bold; margin-bottom: 4px;">💀 Todesrettungswürfe (Death Saves)</div>
                 <div class="death-saves-row">
@@ -905,7 +939,7 @@
                 </div>
             </div>
 
-            <!-- NEU: AKTIVE ZUSTÄNDE ALS DROPDOWN-MENÜ -->
+            <!-- AKTIVE ZUSTÄNDE ALS DROPDOWN-MENÜ -->
             <div class="field-left" style="margin-top: 10px;">
                 <label>Aktive Zustände & Effekte (Sichtbar für DM)</label>
                 <div style="display: flex; gap: 6px;">
@@ -1110,7 +1144,7 @@
         </div>
     </div>
 
-    <div class="version-badge" onclick="openChangelogModal()">v0.6.3 Conditions Dropdown</div>
+    <div class="version-badge" onclick="openChangelogModal()">v0.6.4 Species & Background</div>
 
     <!-- LEVEL UP MODAL -->
     <div id="levelup-modal" class="modal-overlay hidden">
@@ -1130,14 +1164,14 @@
     <div id="changelog-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Version 0.6.3 - Changelog</h2>
+                <h2>Version 0.6.4 - Changelog</h2>
                 <button type="button" class="modal-close" onclick="closeChangelogModal()">✕</button>
             </div>
             <div class="changelog-item">
-                <h4>📜 Alle offiziellen D&D 5e Zustände</h4>
+                <h4>🧬 Spezies & Hintergründe</h4>
                 <ul>
-                    <li><strong>Dropdown-Auswahl:</strong> Alle 9+ offiziellen Regel-Zustände (Blind, Bezaubert, Erschöpft, Versteinert, Bewusstlos etc.) integriert.</li>
-                    <li><strong>Dynamische Badges:</strong> Aktive Zustände werden als kleine Chips angezeigt, die mit einem Klick wieder entfernt werden können. Live-Sync an DM.</li>
+                    <li><strong>Auswahllisten:</strong> Füge nun direkt Spezies (z. B. Drachenblütiger - Messingdrache) und Hintergründe (z. B. Bauer) hinzu.</li>
+                    <li><strong>Cloud & Local Sync:</strong> Spezies und Background werden vollautomatisch mitgespeichert und synchronisiert.</li>
                 </ul>
             </div>
         </div>
@@ -1523,7 +1557,6 @@
             if (!val) return;
 
             let container = document.getElementById('active-conditions-container');
-            // Prüfen ob schon vorhanden
             let existing = container.querySelectorAll(`[data-cond="${val}"]`);
             if (existing.length > 0) {
                 select.value = "";
@@ -2018,6 +2051,8 @@
                 user: currentUser,
                 id: currentActiveCharId,
                 name: document.getElementById('char-name').value || 'Helden-Charakter',
+                species: document.getElementById('char-species').value || '',
+                background: document.getElementById('char-background').value || '',
                 clazz: charClassEl ? charClassEl.value : 'Unbekannt',
                 subclass: document.getElementById('char-subclass').value || '',
                 concentration: activeConcentration,
@@ -2091,6 +2126,7 @@
                 if (!c || typeof c !== 'object') return;
 
                 let name = c.name || 'Unbenannter Held';
+                let species = c.species || '';
                 let clazz = c.clazz || 'Abenteurer';
                 let level = c.level || '1';
                 let subclass = c.subclass || '';
@@ -2131,7 +2167,7 @@
                         <div class="party-card-top">
                             <div class="party-info">
                                 <h3>${name}${userTag}</h3>
-                                <p>${clazz} (${level}) • ${subclass}</p>
+                                <p>${species ? species + ' • ' : ''}${clazz} (${level})</p>
                             </div>
                             <div class="party-stats">
                                 <div class="party-stat-box"><label>HP</label><span style="color: ${hpColor};">${hpCurr}/${hpMax}</span></div>
@@ -2148,7 +2184,7 @@
                     <div class="party-card" style="border-left: 3px solid ${hpColor};">
                         <div class="party-card-top">
                             <div class="party-info">
-                                <h3>${name}${userTag} <span style="font-size: 0.75rem; color: var(--text-muted);">(${clazz} ${level})</span></h3>
+                                <h3>${name}${userTag} <span style="font-size: 0.75rem; color: var(--text-muted);">(${species ? species + ' ' : ''}${clazz} ${level})</span></h3>
                                 <p>Sub: ${subclass || '-'}</p>
                             </div>
                             <div class="party-stats">
@@ -2245,7 +2281,7 @@
                     <div class="char-select-card">
                         <div class="char-select-info" onclick="loadCharacter('${c.id}')" style="flex-grow: 1; cursor: pointer;">
                             <h3>${c.name}</h3>
-                            <p>${c.clazz} (Stufe ${c.level}) • ${c.subclass || 'Keine Subklasse'}</p>
+                            <p>${c.species ? c.species + ' • ' : ''}${c.clazz} (Stufe ${c.level})</p>
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <div class="switch-container">
@@ -2267,7 +2303,7 @@
             let newId = 'char_' + Math.random().toString(36).substring(2, 9);
             let chars = getCharactersList();
             let defaultName = "Neuer Held";
-            chars.push({ id: newId, name: defaultName, clazz: 'Kämpfer', subclass: 'Champion', level: '1' });
+            chars.push({ id: newId, name: defaultName, species: 'Drachenblütiger (Messing)', clazz: 'Kämpfer', subclass: 'Champion', level: '1' });
             saveCharactersList(chars);
 
             currentActiveCharId = newId;
@@ -2277,7 +2313,7 @@
             }
 
             let emptySheetData = {
-                id: newId, name: 'Neuer Held', clazz: 'Kämpfer', subclass: 'Champion', level: '1',
+                id: newId, name: 'Neuer Held', species: 'Drachenblütiger (Messing)', background: 'Bauer / Farmer', clazz: 'Kämpfer', subclass: 'Champion', level: '1',
                 'hp-curr': '10', 'hp-max': '10', 'hp-temp': '0', 'ac': '10', 'pb': '2', 'init': '0',
                 'speed': '9m', 'passive-perception': '10',
                 'str': '10', 'dex': '10', 'con': '10', 'int': '10', 'wis': '10', 'cha': '10',
@@ -2318,10 +2354,10 @@
 
             if (user === 'test1') {
                 preset = {
-                    id: newId, name: 'Zar´thul Rocgarn', clazz: 'Barbar', subclass: 'Pfad des Weltenbaums', level: '6',
+                    id: newId, name: 'Zar´thul Rocgarn', species: 'Drachenblütiger (Messing)', background: 'Bauer / Farmer', clazz: 'Barbar', subclass: 'Pfad des Weltenbaums', level: '6',
                     'hp-curr': '59', 'hp-max': '59', 'hp-temp': '0', 'ac': '15', 'speed': '12m', 'passive-perception': '13',
                     'str': '16', 'dex': '14', 'con': '16', 'int': '8', 'wis': '10', 'cha': '10',
-                    'save-str': true, 'con': '16', 'save-con': true, 'skill-athletics': true,
+                    'save-str': true, 'save-con': true, 'skill-athletics': true,
                     weapons: [
                         { name: 'Speer', stat: 'str', prof: true, magic: '1', dice: '1W8 / 1W10' },
                         { name: 'Zweihandaxt', stat: 'str', prof: true, magic: '0', dice: '1W12' }
@@ -2330,7 +2366,7 @@
                 };
             } else if (user === 'test2') {
                 preset = {
-                    id: newId, name: 'Malakor der Paktgebundene', clazz: 'Hexenmeister', subclass: 'Der Unterweltler', level: '6',
+                    id: newId, name: 'Malakor der Paktgebundene', species: 'Tiefling', background: 'Weiser', clazz: 'Hexenmeister', subclass: 'Der Unterweltler', level: '6',
                     'hp-curr': '45', 'hp-max': '45', 'hp-temp': '0', 'ac': '14', 'speed': '9m', 'passive-perception': '11',
                     'str': '8', 'dex': '14', 'con': '14', 'int': '10', 'wis': '12', 'cha': '18',
                     'spell-attr': 'cha',
@@ -2341,7 +2377,7 @@
                 };
             } else if (user === 'test3') {
                 preset = {
-                    id: newId, name: 'Boren der Stille', clazz: 'Mönch', subclass: 'Weg der Offenen Hand', level: '6',
+                    id: newId, name: 'Boren der Stille', species: 'Elf', background: 'Straßenkind', clazz: 'Mönch', subclass: 'Weg der Offenen Hand', level: '6',
                     'hp-curr': '52', 'hp-max': '52', 'hp-temp': '0', 'ac': '16', 'speed': '13.5m', 'passive-perception': '16',
                     'str': '10', 'dex': '18', 'con': '14', 'int': '10', 'wis': '16', 'cha': '8',
                     weapons: [{ name: 'Unbewaffneter Schlag', stat: 'dex', prof: true, magic: '1', dice: '1W6' }],
@@ -2349,7 +2385,7 @@
                 };
             } else if (user === 'test4') {
                 preset = {
-                    id: newId, name: 'Sir Alden', clazz: 'Kämpfer', subclass: 'Meister des Kampfs (Battle Master)', level: '6',
+                    id: newId, name: 'Sir Alden', species: 'Mensch', background: 'Soldat', clazz: 'Kämpfer', subclass: 'Meister des Kampfs (Battle Master)', level: '6',
                     'hp-curr': '60', 'hp-max': '60', 'hp-temp': '0', 'ac': '18', 'speed': '9m', 'passive-perception': '14',
                     'str': '18', 'dex': '10', 'con': '16', 'int': '10', 'wis': '12', 'cha': '10',
                     weapons: [{ name: 'Großschwert +1', stat: 'str', prof: true, magic: '1', dice: '2W6' }],
@@ -2358,7 +2394,7 @@
             }
 
             if (preset) {
-                saveCharactersList([{ id: preset.id, name: preset.name, clazz: preset.clazz, subclass: preset.subclass, level: preset.level }]);
+                saveCharactersList([{ id: preset.id, name: preset.name, species: preset.species, clazz: preset.clazz, subclass: preset.subclass, level: preset.level }]);
                 localStorage.setItem('dnd_sheet_data_' + user + '_' + preset.id, JSON.stringify(preset));
                 if (isCloudActive && db && currentUser) {
                     db.ref('user_sheets/' + user + '/' + preset.id).set(preset);
@@ -2389,12 +2425,10 @@
             let condContainer = document.getElementById('active-conditions-container');
             if (condContainer) {
                 condContainer.innerHTML = '';
-                // Migration alter Zustände falls vorhanden
                 let listToLoad = [];
                 if (data.conditionsList && Array.isArray(data.conditionsList)) {
                     listToLoad = data.conditionsList;
                 } else if (data.conditions) {
-                    // Abwärtskompatibilität für v0.6.2 Buttons
                     if (data.conditions.poisoned) listToLoad.push('Poisoned');
                     if (data.conditions.stunned) listToLoad.push('Stunned');
                     if (data.conditions.prone) listToLoad.push('Prone');
@@ -2794,19 +2828,21 @@
             let chars = getCharactersList();
             let cIndex = chars.findIndex(c => c.id === currentActiveCharId);
             let nameEl = document.getElementById('char-name');
+            let speciesEl = document.getElementById('char-species');
             let classEl = document.getElementById('char-class');
             let subEl = document.getElementById('char-subclass');
             let lvlEl = document.getElementById('char-level');
 
             let cName = nameEl ? nameEl.value : 'Helden-Charakter';
+            let cSpecies = speciesEl ? speciesEl.value : '';
             let cClass = classEl ? classEl.value : 'Abenteurer';
             let cSub = subEl ? subEl.value : '';
             let cLvl = lvlEl ? lvlEl.value : '1';
 
             if (cIndex >= 0) {
-                chars[cIndex] = { id: currentActiveCharId, name: cName, clazz: cClass, subclass: cSub, level: cLvl };
+                chars[cIndex] = { id: currentActiveCharId, name: cName, species: cSpecies, clazz: cClass, subclass: cSub, level: cLvl };
             } else {
-                chars.push({ id: currentActiveCharId, name: cName, clazz: cClass, subclass: cSub, level: cLvl });
+                chars.push({ id: currentActiveCharId, name: cName, species: cSpecies, clazz: cClass, subclass: cSub, level: cLvl });
             }
             saveCharactersList(chars);
 
