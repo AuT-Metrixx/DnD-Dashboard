@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.6.2</title>
+    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.6.3</title>
     <!-- Firebase SDK (Cloud Live Sync) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -425,30 +425,6 @@
             margin-bottom: 6px;
         }
         .btn-action-click:hover { background: #1f3326; }
-
-        .status-toggle-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 6px;
-            margin-top: 6px;
-        }
-        .status-chip {
-            background: #11151d;
-            border: 1px solid var(--border-color);
-            color: var(--text-muted);
-            padding: 6px;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s;
-        }
-        .status-chip.active {
-            background: #422026;
-            border-color: var(--neg-color);
-            color: #fc8181;
-        }
 
         /* DEATH SAVING THROWS STYLING */
         .death-saves-box {
@@ -929,12 +905,31 @@
                 </div>
             </div>
 
-            <label class="field-left" style="margin-top: 10px;">Aktive Zustände & Effekte (Sichtbar für DM)</label>
-            <div class="status-toggle-grid">
-                <button type="button" class="status-chip" id="cond-poisoned" onclick="toggleCondition('poisoned')">☣️ Vergiftet</button>
-                <button type="button" class="status-chip" id="cond-stunned" onclick="toggleCondition('stunned')">💫 Betäubt</button>
-                <button type="button" class="status-chip" id="cond-prone" onclick="toggleCondition('prone')">🛌 Liegend</button>
-                <button type="button" class="status-chip" id="cond-paralyzed" onclick="toggleCondition('paralyzed')">⚡ Gelähmt</button>
+            <!-- NEU: AKTIVE ZUSTÄNDE ALS DROPDOWN-MENÜ -->
+            <div class="field-left" style="margin-top: 10px;">
+                <label>Aktive Zustände & Effekte (Sichtbar für DM)</label>
+                <div style="display: flex; gap: 6px;">
+                    <select id="condition-select" style="flex-grow: 1;">
+                        <option value="">-- Zustand hinzufügen... --</option>
+                        <option value="Blinded">👁️ Blind (Blinded)</option>
+                        <option value="Charmed">💖 Bezaubert (Charmed)</option>
+                        <option value="Deafened">👂 Taub (Deafened)</option>
+                        <option value="Exhaustion">🌀 Erschöpft (Exhaustion)</option>
+                        <option value="Frightened">😱 Furchterfüllt (Frightened)</option>
+                        <option value="Grappled">🤝 Gepackt (Grappled)</option>
+                        <option value="Incapacitated">🛑 Handlungsunfähig (Incapacitated)</option>
+                        <option value="Invisible">👻 Unsichtbar (Invisible)</option>
+                        <option value="Paralyzed">⚡ Gelähmt (Paralyzed)</option>
+                        <option value="Petrified">🗿 Versteinert (Petrified)</option>
+                        <option value="Poisoned">☣️ Vergiftet (Poisoned)</option>
+                        <option value="Prone">🛌 Liegend (Prone)</option>
+                        <option value="Restrained">⛓️ Fesseln / Festgelegt (Restrained)</option>
+                        <option value="Stunned">💫 Benommen / Betäubt (Stunned)</option>
+                        <option value="Unconscious">💤 Bewusstlos (Unconscious)</option>
+                    </select>
+                    <button type="button" class="btn-rest" onclick="addSelectedCondition()" style="padding: 0 12px; background: #16241b; border-color: var(--pos-color); color: var(--pos-color);">+ Hinzufügen</button>
+                </div>
+                <div id="active-conditions-container" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;"></div>
             </div>
         </div>
 
@@ -1115,7 +1110,7 @@
         </div>
     </div>
 
-    <div class="version-badge" onclick="openChangelogModal()">v0.6.2 Death Saving Throws</div>
+    <div class="version-badge" onclick="openChangelogModal()">v0.6.3 Conditions Dropdown</div>
 
     <!-- LEVEL UP MODAL -->
     <div id="levelup-modal" class="modal-overlay hidden">
@@ -1135,14 +1130,14 @@
     <div id="changelog-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Version 0.6.2 - Changelog</h2>
+                <h2>Version 0.6.3 - Changelog</h2>
                 <button type="button" class="modal-close" onclick="closeChangelogModal()">✕</button>
             </div>
             <div class="changelog-item">
-                <h4>💀 Todesrettungswürfe (Death Saves)</h4>
+                <h4>📜 Alle offiziellen D&D 5e Zustände</h4>
                 <ul>
-                    <li><strong>Live-Tracking:</strong> Erfolge und Misserfolge (jeweils 1 bis 3) direkt im Charakterblatt anklickbar.</li>
-                    <li><strong>DM-Ansicht:</strong> Der Spielleiter sieht aktive Todesrettungswürfe direkt im Live-Raum.</li>
+                    <li><strong>Dropdown-Auswahl:</strong> Alle 9+ offiziellen Regel-Zustände (Blind, Bezaubert, Erschöpft, Versteinert, Bewusstlos etc.) integriert.</li>
+                    <li><strong>Dynamische Badges:</strong> Aktive Zustände werden als kleine Chips angezeigt, die mit einem Klick wieder entfernt werden können. Live-Sync an DM.</li>
                 </ul>
             </div>
         </div>
@@ -1231,6 +1226,24 @@
                 19: "Ability Score Improvement (ASI / Talent)",
                 20: "Extra Attack (3)"
             }
+        };
+
+        const conditionNamesDE = {
+            "Blinded": "👁️ Blind",
+            "Charmed": "💖 Bezaubert",
+            "Deafened": "👂 Taub",
+            "Exhaustion": "🌀 Erschöpft",
+            "Frightened": "😱 Furchterfüllt",
+            "Grappled": "🤝 Gepackt",
+            "Incapacitated": "🛑 Handlungsunfähig",
+            "Invisible": "👻 Unsichtbar",
+            "Paralyzed": "⚡ Gelähmt",
+            "Petrified": "🗿 Versteinert",
+            "Poisoned": "☣️ Vergiftet",
+            "Prone": "🛌 Liegend",
+            "Restrained": "⛓️ Fesseln",
+            "Stunned": "💫 Benommen",
+            "Unconscious": "💤 Bewusstlos"
         };
 
         function getDefaultFeatureText(clazz, lvl) {
@@ -1504,9 +1517,35 @@
             }
         }
 
-        function toggleCondition(condName) {
-            let btn = document.getElementById('cond-' + condName);
-            if (btn) btn.classList.toggle('active');
+        function addSelectedCondition() {
+            let select = document.getElementById('condition-select');
+            let val = select.value;
+            if (!val) return;
+
+            let container = document.getElementById('active-conditions-container');
+            // Prüfen ob schon vorhanden
+            let existing = container.querySelectorAll(`[data-cond="${val}"]`);
+            if (existing.length > 0) {
+                select.value = "";
+                return;
+            }
+
+            let labelText = conditionNamesDE[val] || val;
+            let tag = document.createElement('div');
+            tag.className = 'status-chip active';
+            tag.style.display = 'inline-flex';
+            tag.style.alignItems = 'center';
+            tag.style.gap = '6px';
+            tag.setAttribute('data-cond', val);
+            tag.innerHTML = `${labelText} <span onclick="removeConditionTag(this)" style="cursor:pointer; color:var(--neg-color); font-weight:bold;">✕</span>`;
+            
+            container.appendChild(tag);
+            select.value = "";
+            saveData();
+        }
+
+        function removeConditionTag(spanElem) {
+            spanElem.closest('.status-chip').remove();
             saveData();
         }
 
@@ -1642,7 +1681,6 @@
                 if (hpCurr) hpCurr.value = maxHp;
                 if (hpTemp) hpTemp.value = 0;
 
-                // Todesrettungswürfe zurücksetzen
                 for (let i = 1; i <= 3; i++) {
                     let s = document.getElementById('death-success-' + i);
                     let f = document.getElementById('death-fail-' + i);
@@ -1962,12 +2000,10 @@
             let charClassEl = document.getElementById('char-class');
             let isRaging = (charClassEl && charClassEl.value === "Barbar" && btnToggle && btnToggle.classList.contains('active'));
 
-            let conditions = {
-                poisoned: document.getElementById('cond-poisoned').classList.contains('active'),
-                stunned: document.getElementById('cond-stunned').classList.contains('active'),
-                prone: document.getElementById('cond-prone').classList.contains('active'),
-                paralyzed: document.getElementById('cond-paralyzed').classList.contains('active')
-            };
+            let activeConditions = [];
+            document.querySelectorAll('#active-conditions-container .status-chip').forEach(chip => {
+                activeConditions.push(chip.getAttribute('data-cond'));
+            });
 
             let deathSaves = {
                 success1: document.getElementById('death-success-1').checked,
@@ -1986,7 +2022,7 @@
                 subclass: document.getElementById('char-subclass').value || '',
                 concentration: activeConcentration,
                 isRaging: isRaging,
-                conditions: conditions,
+                conditionsList: activeConditions,
                 deathSaves: deathSaves,
                 level: document.getElementById('char-level').value || '1',
                 hpCurr: document.getElementById('hp-curr').value || '0',
@@ -2075,11 +2111,11 @@
                 if (c.isRaging) badgesHTML += `<span class="dm-badge badge-rage">🔥 Wut aktiv</span>`;
                 if (c.concentration) badgesHTML += `<span class="dm-badge badge-conc">🔮 Konz: ${c.concentration}</span>`;
 
-                if (c.conditions) {
-                    if (c.conditions.poisoned) badgesHTML += `<span class="dm-badge badge-cond">☣️ Vergiftet</span>`;
-                    if (c.conditions.stunned) badgesHTML += `<span class="dm-badge badge-cond">💫 Betäubt</span>`;
-                    if (c.conditions.prone) badgesHTML += `<span class="dm-badge badge-cond">🛌 Liegend</span>`;
-                    if (c.conditions.paralyzed) badgesHTML += `<span class="dm-badge badge-cond">⚡ Gelähmt</span>`;
+                if (c.conditionsList && Array.isArray(c.conditionsList)) {
+                    c.conditionsList.forEach(condKey => {
+                        let dispName = conditionNamesDE[condKey] || condKey;
+                        badgesHTML += `<span class="dm-badge badge-cond">${dispName}</span>`;
+                    });
                 }
 
                 if (c.deathSaves) {
@@ -2350,10 +2386,31 @@
             if (data.isRaging && btnToggle) btnToggle.classList.add('active');
             else if (btnToggle) btnToggle.classList.remove('active');
 
-            if (data.conditions) {
-                ['poisoned', 'stunned', 'prone', 'paralyzed'].forEach(cond => {
-                    let btn = document.getElementById('cond-' + cond);
-                    if (btn) btn.classList.toggle('active', !!data.conditions[cond]);
+            let condContainer = document.getElementById('active-conditions-container');
+            if (condContainer) {
+                condContainer.innerHTML = '';
+                // Migration alter Zustände falls vorhanden
+                let listToLoad = [];
+                if (data.conditionsList && Array.isArray(data.conditionsList)) {
+                    listToLoad = data.conditionsList;
+                } else if (data.conditions) {
+                    // Abwärtskompatibilität für v0.6.2 Buttons
+                    if (data.conditions.poisoned) listToLoad.push('Poisoned');
+                    if (data.conditions.stunned) listToLoad.push('Stunned');
+                    if (data.conditions.prone) listToLoad.push('Prone');
+                    if (data.conditions.paralyzed) listToLoad.push('Paralyzed');
+                }
+
+                listToLoad.forEach(val => {
+                    let labelText = conditionNamesDE[val] || val;
+                    let tag = document.createElement('div');
+                    tag.className = 'status-chip active';
+                    tag.style.display = 'inline-flex';
+                    tag.style.alignItems = 'center';
+                    tag.style.gap = '6px';
+                    tag.setAttribute('data-cond', val);
+                    tag.innerHTML = `${labelText} <span onclick="removeConditionTag(this)" style="cursor:pointer; color:var(--neg-color); font-weight:bold;">✕</span>`;
+                    condContainer.appendChild(tag);
                 });
             }
 
@@ -2664,12 +2721,11 @@
             let btnToggle = document.getElementById('btn-toggle-rage');
             data.isRaging = (btnToggle && btnToggle.classList.contains('active'));
 
-            data.conditions = {
-                poisoned: document.getElementById('cond-poisoned').classList.contains('active'),
-                stunned: document.getElementById('cond-stunned').classList.contains('active'),
-                prone: document.getElementById('cond-prone').classList.contains('active'),
-                paralyzed: document.getElementById('cond-paralyzed').classList.contains('active')
-            };
+            let activeConditions = [];
+            document.querySelectorAll('#active-conditions-container .status-chip').forEach(chip => {
+                activeConditions.push(chip.getAttribute('data-cond'));
+            });
+            data.conditionsList = activeConditions;
 
             data.deathSaves = {
                 success1: document.getElementById('death-success-1').checked,
