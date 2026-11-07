@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.6.4</title>
+    <title>D&D 5e Live Party-Dashboard & Zauberbuch v0.6.5</title>
     <!-- Firebase SDK (Cloud Live Sync) -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -354,8 +354,10 @@
         .attr-inputs input { width: 50px; padding: 4px; font-size: 0.9rem; }
 
         .list-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; font-size: 0.8rem; }
-        .list-row-left { display: flex; align-items: center; gap: 6px; }
+        .list-row-left { display: flex; align-items: center; gap: 5px; }
         .list-row-left input[type="checkbox"] { accent-color: var(--pos-color); cursor: pointer; width: 14px; height: 14px; margin: 0; }
+        .exp-checkbox { accent-color: var(--warning-color) !important; }
+        .exp-label { font-size: 0.65rem; color: var(--warning-color); font-weight: bold; margin: 0 2px 0 0; text-transform: uppercase; cursor: pointer; }
         .list-row span { color: var(--text-muted); }
         .sub-item { padding-left: 2px; border-top: 1px dotted #202632; }
 
@@ -569,6 +571,7 @@
         .badge-conc { background: #232136; color: #d8b4fe; border: 1px solid #a855f7; }
         .badge-cond { background: #381a1a; color: #f87171; border: 1px solid #ef4444; }
         .badge-death { background: #3c1618; color: #fca5a5; border: 1px solid #dc2626; }
+        .badge-res { background: #162a22; color: #6ee7b7; border: 1px solid #10b981; }
 
         .dm-note-box {
             margin-top: 8px;
@@ -707,7 +710,7 @@
         </div>
     </div>
 
-    <!-- ROLLEN-AUSWAHL MIT ERKLÄRENDEN INFOS -->
+    <!-- ROLLEN-AUSWAHL -->
     <div id="role-overlay" class="overlay-screen hidden">
         <div class="box-card" style="max-width: 360px;">
             <h2>Rolle wählen</h2>
@@ -761,7 +764,6 @@
                 <input type="text" id="char-name" value="Zar´thul Rocgarn" placeholder="Charaktername" oninput="saveData()">
             </div>
             
-            <!-- NEU: SPEZIES & HINTERGRUND -->
             <div class="grid-2" style="margin-bottom: 10px;">
                 <div class="field-left">
                     <label>Spezies / Volk</label>
@@ -792,6 +794,28 @@
                         <option value="Handwerker">🔨 Handwerker</option>
                         <option value="Sonstige">✨ Sonstiger (Custom)</option>
                     </select>
+                </div>
+            </div>
+
+            <!-- NEU: START-TALENT (ORIGIN FEAT) -->
+            <div class="grid-2" style="margin-bottom: 10px;">
+                <div class="field-left">
+                    <label>Start-Talent (Origin Feat 2024)</label>
+                    <select id="char-origin-feat-select" onchange="onOriginFeatSelectChange(); saveData();">
+                        <option value="Tough (Zähigkeit)">💪 Tough (Zähigkeit - +2 HP/Lvl)</option>
+                        <option value="Alert (Wachsamkeit)">👁️ Alert (Wachsamkeit - Init Swap)</option>
+                        <option value="Savage Attacker (Wilder Angreifer)">⚔️ Savage Attacker (Max Dmg Roll)</option>
+                        <option value="Lucky (Glückspilz)">🎲 Lucky (Glückspunkte)</option>
+                        <option value="Healer (Heiler)">💊 Healer (Trank & Heilkit Boost)</option>
+                        <option value="Magic Initiate (Magiebegabt)">🔮 Magic Initiate (Zauberer/Kleriker)</option>
+                        <option value="Musician (Musiker)">🎵 Musician (Inspiriere Gefährten)</option>
+                        <option value="Tavern Brawler (Wirtshausprügler)">🍺 Tavern Brawler (Unbewaffnet & Schubsen)</option>
+                        <option value="Custom">✨ Eigenes Talent (Freitext)</option>
+                    </select>
+                </div>
+                <div class="field-left">
+                    <label>Talent Details / Freitext</label>
+                    <input type="text" id="char-origin-feat-custom" value="Tough (+2 HP pro Stufe)" placeholder="Talent-Beschreibung..." oninput="saveData()" style="text-align:left;">
                 </div>
             </div>
 
@@ -898,6 +922,19 @@
             </div>
         </div>
 
+        <!-- NEU: RASSEN- & KLASSEN-FÄHIGKEITEN + RESISTENZEN -->
+        <div class="section">
+            <div class="section-title">Fähigkeiten, Merkmale & Resistenzen</div>
+            <div class="field-left" style="margin-bottom: 8px;">
+                <label>Resistenzen & Immunitäten (Sichtbar für DM)</label>
+                <input type="text" id="char-resistances" value="Feuer (Messingdrache), Wucht/Stich/Hieb (Wut)" placeholder="z.B. Feuer, Gifte..." oninput="saveData()" style="text-align:left;">
+            </div>
+            <div class="field-left">
+                <label>Fähigkeiten & Merkmale (Features & Traits)</label>
+                <textarea id="char-features-text" rows="3" placeholder="Atemwaffe (Messing: Feuer-Kegel), Danger Sense, Vitalität des Weltenbaums..." oninput="saveData()" style="text-align:left; font-size:0.8rem;"></textarea>
+            </div>
+        </div>
+
         <div class="section">
             <div class="section-title">Kampfwerte & Status</div>
             <div class="grid-4" style="margin-bottom: 10px;">
@@ -968,7 +1005,7 @@
         </div>
 
         <div class="section">
-            <div class="section-title">Attribute & Fertigkeiten</div>
+            <div class="section-title">Attribute & Fertigkeiten (Mit Expertise Support)</div>
             <div class="attr-grid">
                 <!-- STR -->
                 <div class="attr-group">
@@ -980,7 +1017,7 @@
                         </div>
                     </div>
                     <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-str" checked onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span id="val-save-str">+6</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-athletics" checked onchange="updateAllCalculations(); saveData()"> Athletik</div><span id="val-skill-athletics">+6</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-athletics" checked onchange="updateAllCalculations(); saveData()"> Athletik <span class="exp-label" title="Expertise">Exp</span><input type="checkbox" id="exp-skill-athletics" class="exp-checkbox" onchange="updateAllCalculations(); saveData()"></div><span id="val-skill-athletics">+6</span></div>
                 </div>
                 <!-- DEX -->
                 <div class="attr-group">
@@ -992,9 +1029,9 @@
                         </div>
                     </div>
                     <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-dex" onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span id="val-save-dex">+2</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-acrobatics" onchange="updateAllCalculations(); saveData()"> Akrobatik</div><span id="val-skill-acrobatics">+2</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-sleight" onchange="updateAllCalculations(); saveData()"> Fingerfertigkeit</div><span id="val-skill-sleight">+2</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-stealth" onchange="updateAllCalculations(); saveData()"> Heimlichkeit</div><span id="val-skill-stealth">+2</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-acrobatics" onchange="updateAllCalculations(); saveData()"> Akrobatik <span class="exp-label" title="Expertise">Exp</span><input type="checkbox" id="exp-skill-acrobatics" class="exp-checkbox" onchange="updateAllCalculations(); saveData()"></div><span id="val-skill-acrobatics">+2</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-sleight" onchange="updateAllCalculations(); saveData()"> Fingerfertigkeit <span class="exp-label" title="Expertise">Exp</span><input type="checkbox" id="exp-skill-sleight" class="exp-checkbox" onchange="updateAllCalculations(); saveData()"></div><span id="val-skill-sleight">+2</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-stealth" onchange="updateAllCalculations(); saveData()"> Heimlichkeit <span class="exp-label" title="Expertise">Exp</span><input type="checkbox" id="exp-skill-stealth" class="exp-checkbox" onchange="updateAllCalculations(); saveData()"></div><span id="val-skill-stealth">+2</span></div>
                 </div>
                 <!-- CON -->
                 <div class="attr-group">
@@ -1017,11 +1054,11 @@
                         </div>
                     </div>
                     <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-int" onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span id="val-save-int">-1</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-arcana" onchange="updateAllCalculations(); saveData()"> Arkane Kunde</div><span id="val-skill-arcana">-1</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-history" onchange="updateAllCalculations(); saveData()"> Geschichte</div><span id="val-skill-history">-1</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-investigation" onchange="updateAllCalculations(); saveData()"> Untersuchung</div><span id="val-skill-investigation">-1</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-nature" onchange="updateAllCalculations(); saveData()"> Naturkunde</div><span id="val-skill-nature">-1</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-religion" onchange="updateAllCalculations(); saveData()"> Religion</div><span id="val-skill-religion">-1</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-arcana" onchange="updateAllCalculations(); saveData()"> Arkane Kunde <span class="exp-label" title="Expertise">Exp</span><input type="checkbox" id="exp-skill-arcana" class="exp-checkbox" onchange="updateAllCalculations(); saveData()"></div><span id="val-skill-arcana">-1</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-history" onchange="updateAllCalculations(); saveData()"> Geschichte <span class="exp-label" title="Expertise">Exp</span><input type="checkbox" id="exp-skill-history" class="exp-checkbox" onchange="updateAllCalculations(); saveData()"></div><span id="val-skill-history">-1</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-investigation" onchange="updateAllCalculations(); saveData()"> Untersuchung <span class="exp-label" title="Expertise">Exp</span><input type="checkbox" id="exp-skill-investigation" class="exp-checkbox" onchange="updateAllCalculations(); saveData()"></div><span id="val-skill-investigation">-1</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-nature" onchange="updateAllCalculations(); saveData()"> Naturkunde <span class="exp-label" title="Expertise">Exp</span><input type="checkbox" id="exp-skill-nature" class="exp-checkbox" onchange="updateAllCalculations(); saveData()"></div><span id="val-skill-nature">-1</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-religion" onchange="updateAllCalculations(); saveData()"> Religion <span class="exp-label" title="Expertise">Exp</span><input type="checkbox" id="exp-skill-religion" class="exp-checkbox" onchange="updateAllCalculations(); saveData()"></div><span id="val-skill-religion">-1</span></div>
                 </div>
                 <!-- WIS -->
                 <div class="attr-group">
@@ -1033,11 +1070,11 @@
                         </div>
                     </div>
                     <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-wis" onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span id="val-save-wis">+0</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-animal" onchange="updateAllCalculations(); saveData()"> Tierumgang</div><span id="val-skill-animal">+0</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-insight" onchange="updateAllCalculations(); saveData()"> Einsicht</div><span id="val-skill-insight">+0</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-medicine" onchange="updateAllCalculations(); saveData()"> Heilkunde</div><span id="val-skill-medicine">+0</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-perception" onchange="updateAllCalculations(); saveData()"> Wahrnehmung</div><span id="val-skill-perception">+0</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-survival" onchange="updateAllCalculations(); saveData()"> Überleben</div><span id="val-skill-survival">+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-animal" onchange="updateAllCalculations(); saveData()"> Tierumgang <span class="exp-label" title="Expertise">Exp</span><input type="checkbox" id="exp-skill-animal" class="exp-checkbox" onchange="updateAllCalculations(); saveData()"></div><span id="val-skill-animal">+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-insight" onchange="updateAllCalculations(); saveData()"> Einsicht <span class="exp-label" title="Expertise">Exp</span><input type="checkbox" id="exp-skill-insight" class="exp-checkbox" onchange="updateAllCalculations(); saveData()"></div><span id="val-skill-insight">+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-medicine" onchange="updateAllCalculations(); saveData()"> Heilkunde <span class="exp-label" title="Expertise">Exp</span><input type="checkbox" id="exp-skill-medicine" class="exp-checkbox" onchange="updateAllCalculations(); saveData()"></div><span id="val-skill-medicine">+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-perception" onchange="updateAllCalculations(); saveData()"> Wahrnehmung <span class="exp-label" title="Expertise">Exp</span><input type="checkbox" id="exp-skill-perception" class="exp-checkbox" onchange="updateAllCalculations(); saveData()"></div><span id="val-skill-perception">+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-survival" onchange="updateAllCalculations(); saveData()"> Überleben <span class="exp-label" title="Expertise">Exp</span><input type="checkbox" id="exp-skill-survival" class="exp-checkbox" onchange="updateAllCalculations(); saveData()"></div><span id="val-skill-survival">+0</span></div>
                 </div>
                 <!-- CHA -->
                 <div class="attr-group">
@@ -1049,10 +1086,10 @@
                         </div>
                     </div>
                     <div class="list-row"><div class="list-row-left"><input type="checkbox" id="save-cha" onchange="updateAllCalculations(); saveData()"> Rettungswurf</div><span id="val-save-cha">+0</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-deception" onchange="updateAllCalculations(); saveData()"> Täuschung</div><span id="val-skill-deception">+0</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-intimidation" onchange="updateAllCalculations(); saveData()"> Einschüchtern</div><span id="val-skill-intimidation">+0</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-performance" onchange="updateAllCalculations(); saveData()"> Auftreten</div><span id="val-skill-performance">+0</span></div>
-                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-persuasion" onchange="updateAllCalculations(); saveData()"> Überzeugen</div><span id="val-skill-persuasion">+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-deception" onchange="updateAllCalculations(); saveData()"> Täuschung <span class="exp-label" title="Expertise">Exp</span><input type="checkbox" id="exp-skill-deception" class="exp-checkbox" onchange="updateAllCalculations(); saveData()"></div><span id="val-skill-deception">+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-intimidation" onchange="updateAllCalculations(); saveData()"> Einschüchtern <span class="exp-label" title="Expertise">Exp</span><input type="checkbox" id="exp-skill-intimidation" class="exp-checkbox" onchange="updateAllCalculations(); saveData()"></div><span id="val-skill-intimidation">+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-performance" onchange="updateAllCalculations(); saveData()"> Auftreten <span class="exp-label" title="Expertise">Exp</span><input type="checkbox" id="exp-skill-performance" class="exp-checkbox" onchange="updateAllCalculations(); saveData()"></div><span id="val-skill-performance">+0</span></div>
+                    <div class="list-row sub-item"><div class="list-row-left"><input type="checkbox" id="skill-persuasion" onchange="updateAllCalculations(); saveData()"> Überzeugen <span class="exp-label" title="Expertise">Exp</span><input type="checkbox" id="exp-skill-persuasion" class="exp-checkbox" onchange="updateAllCalculations(); saveData()"></div><span id="val-skill-persuasion">+0</span></div>
                 </div>
             </div>
         </div>
@@ -1144,7 +1181,7 @@
         </div>
     </div>
 
-    <div class="version-badge" onclick="openChangelogModal()">v0.6.4 Species & Background</div>
+    <div class="version-badge" onclick="openChangelogModal()">v0.6.5 Origin Feats & Expertise</div>
 
     <!-- LEVEL UP MODAL -->
     <div id="levelup-modal" class="modal-overlay hidden">
@@ -1164,14 +1201,15 @@
     <div id="changelog-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Version 0.6.4 - Changelog</h2>
+                <h2>Version 0.6.5 - Changelog</h2>
                 <button type="button" class="modal-close" onclick="closeChangelogModal()">✕</button>
             </div>
             <div class="changelog-item">
-                <h4>🧬 Spezies & Hintergründe</h4>
+                <h4>⭐ Neue Features in v0.6.5</h4>
                 <ul>
-                    <li><strong>Auswahllisten:</strong> Füge nun direkt Spezies (z. B. Drachenblütiger - Messingdrache) und Hintergründe (z. B. Bauer) hinzu.</li>
-                    <li><strong>Cloud & Local Sync:</strong> Spezies und Background werden vollautomatisch mitgespeichert und synchronisiert.</li>
+                    <li><strong>Origin Feats (Start-Talente):</strong> Wähle dein 2024er Start-Talent (Tough, Alert, Lucky etc.) mit Details.</li>
+                    <li><strong>Fertigkeits-Expertise (Exp):</strong> Aktiviere doppelten Übungsbonus für Fertigkeiten.</li>
+                    <li><strong>Resistenzen & Merkmale:</strong> Trage Resistenzen ein (werden an den DM gesynct) sowie rassen-/klassenspezifische Features.</li>
                 </ul>
             </div>
         </div>
@@ -1285,6 +1323,19 @@
                 return classLevelFeatures[clazz][lvl];
             }
             return `Neue Klassen-Fähigkeiten, Attributsverbesserung (ASI) oder Zaubergrad-Steigerung für Stufe ${lvl}.`;
+        }
+
+        function onOriginFeatSelectChange() {
+            let select = document.getElementById('char-origin-feat-select');
+            let customInput = document.getElementById('char-origin-feat-custom');
+            if (!select || !customInput) return;
+            
+            let val = select.value;
+            if (val.includes("Tough")) customInput.value = "Tough (+2 HP pro Stufe)";
+            else if (val.includes("Alert")) customInput.value = "Alert (Bonus auf Init, Swap Init mit Gefährten)";
+            else if (val.includes("Savage")) customInput.value = "Savage Attacker (Waffen-Schadenswürfel wiederholen)";
+            else if (val.includes("Lucky")) customInput.value = "Lucky (Glückspunkte für Vorteil/Nachteil)";
+            else if (val.includes("Healer")) customInput.value = "Healer (Heilkit gibt Trefferwürfel-Heilung zurück)";
         }
 
         function setAuthMode(mode) {
@@ -2053,6 +2104,7 @@
                 name: document.getElementById('char-name').value || 'Helden-Charakter',
                 species: document.getElementById('char-species').value || '',
                 background: document.getElementById('char-background').value || '',
+                resistances: document.getElementById('char-resistances').value || '',
                 clazz: charClassEl ? charClassEl.value : 'Unbekannt',
                 subclass: document.getElementById('char-subclass').value || '',
                 concentration: activeConcentration,
@@ -2130,6 +2182,7 @@
                 let clazz = c.clazz || 'Abenteurer';
                 let level = c.level || '1';
                 let subclass = c.subclass || '';
+                let resistances = c.resistances || '';
                 let hpCurr = c.hpCurr !== undefined ? parseInt(c.hpCurr) : 0;
                 let hpMax = c.hpMax !== undefined ? parseInt(c.hpMax) : 1;
                 let ac = c.ac !== undefined ? c.ac : '10';
@@ -2152,6 +2205,10 @@
                         let dispName = conditionNamesDE[condKey] || condKey;
                         badgesHTML += `<span class="dm-badge badge-cond">${dispName}</span>`;
                     });
+                }
+
+                if (resistances) {
+                    badgesHTML += `<span class="dm-badge badge-res">🛡️ Res: ${resistances}</span>`;
                 }
 
                 if (c.deathSaves) {
@@ -2313,7 +2370,9 @@
             }
 
             let emptySheetData = {
-                id: newId, name: 'Neuer Held', species: 'Drachenblütiger (Messing)', background: 'Bauer / Farmer', clazz: 'Kämpfer', subclass: 'Champion', level: '1',
+                id: newId, name: 'Neuer Held', species: 'Drachenblütiger (Messing)', background: 'Bauer / Farmer',
+                'char-origin-feat-select': 'Tough (Zähigkeit)', 'char-origin-feat-custom': 'Tough (+2 HP pro Stufe)',
+                clazz: 'Kämpfer', subclass: 'Champion', level: '1',
                 'hp-curr': '10', 'hp-max': '10', 'hp-temp': '0', 'ac': '10', 'pb': '2', 'init': '0',
                 'speed': '9m', 'passive-perception': '10',
                 'str': '10', 'dex': '10', 'con': '10', 'int': '10', 'wis': '10', 'cha': '10',
@@ -2354,10 +2413,14 @@
 
             if (user === 'test1') {
                 preset = {
-                    id: newId, name: 'Zar´thul Rocgarn', species: 'Drachenblütiger (Messing)', background: 'Bauer / Farmer', clazz: 'Barbar', subclass: 'Pfad des Weltenbaums', level: '6',
+                    id: newId, name: 'Zar´thul Rocgarn', species: 'Drachenblütiger (Messing)', background: 'Bauer / Farmer',
+                    'char-origin-feat-select': 'Tough (Zähigkeit)', 'char-origin-feat-custom': 'Tough (+2 HP pro Stufe)',
+                    clazz: 'Barbar', subclass: 'Pfad des Weltenbaums', level: '6',
                     'hp-curr': '59', 'hp-max': '59', 'hp-temp': '0', 'ac': '15', 'speed': '12m', 'passive-perception': '13',
+                    'char-resistances': 'Feuer (Messingdrache), Wucht/Stich/Hieb (Wut)',
+                    'char-features-text': 'Atemwaffe (Messing: Feuer-Kegel W6s), Danger Sense, Reckless Attack, Vitalität des Weltenbaums (Temp-HP)',
                     'str': '16', 'dex': '14', 'con': '16', 'int': '8', 'wis': '10', 'cha': '10',
-                    'save-str': true, 'save-con': true, 'skill-athletics': true,
+                    'save-str': true, 'save-con': true, 'skill-athletics': true, 'exp-skill-athletics': true,
                     weapons: [
                         { name: 'Speer', stat: 'str', prof: true, magic: '1', dice: '1W8 / 1W10' },
                         { name: 'Zweihandaxt', stat: 'str', prof: true, magic: '0', dice: '1W12' }
@@ -2366,8 +2429,12 @@
                 };
             } else if (user === 'test2') {
                 preset = {
-                    id: newId, name: 'Malakor der Paktgebundene', species: 'Tiefling', background: 'Weiser', clazz: 'Hexenmeister', subclass: 'Der Unterweltler', level: '6',
+                    id: newId, name: 'Malakor der Paktgebundene', species: 'Tiefling', background: 'Weiser',
+                    'char-origin-feat-select': 'Magic Initiate (Magiebegabt)', 'char-origin-feat-custom': 'Magic Initiate (Hexenmeister Spells)',
+                    clazz: 'Hexenmeister', subclass: 'Der Unterweltler', level: '6',
                     'hp-curr': '45', 'hp-max': '45', 'hp-temp': '0', 'ac': '14', 'speed': '9m', 'passive-perception': '11',
+                    'char-resistances': 'Feuer (Hellish Resistance)',
+                    'char-features-text': 'Dunkelsicht 18m, Pakt der Klinge, Segen des Unterweltlers (Temp HP bei Kill)',
                     'str': '8', 'dex': '14', 'con': '14', 'int': '10', 'wis': '12', 'cha': '18',
                     'spell-attr': 'cha',
                     spells: [{ prep: true, name: 'Eldritch Blast', level: '0', time: '1 Akt.', conc: false, notes: 'Magischer Strahl' },
@@ -2377,16 +2444,23 @@
                 };
             } else if (user === 'test3') {
                 preset = {
-                    id: newId, name: 'Boren der Stille', species: 'Elf', background: 'Straßenkind', clazz: 'Mönch', subclass: 'Weg der Offenen Hand', level: '6',
+                    id: newId, name: 'Boren der Stille', species: 'Elf', background: 'Straßenkind',
+                    'char-origin-feat-select': 'Alert (Wachsamkeit)', 'char-origin-feat-custom': 'Alert (+PB auf Init & Swap)',
+                    clazz: 'Mönch', subclass: 'Weg der Offenen Hand', level: '6',
                     'hp-curr': '52', 'hp-max': '52', 'hp-temp': '0', 'ac': '16', 'speed': '13.5m', 'passive-perception': '16',
+                    'char-features-text': 'Dunkelsicht 18m, Unbewaffneter Kampf d6, Ki-Schläge, Geschoss abwehren',
                     'str': '10', 'dex': '18', 'con': '14', 'int': '10', 'wis': '16', 'cha': '8',
+                    'skill-stealth': true, 'exp-skill-stealth': true,
                     weapons: [{ name: 'Unbewaffneter Schlag', stat: 'dex', prof: true, magic: '1', dice: '1W6' }],
                     potions: [{ type: 'Heiltrank (1W4+4)', count: '2', customName: '' }]
                 };
             } else if (user === 'test4') {
                 preset = {
-                    id: newId, name: 'Sir Alden', species: 'Mensch', background: 'Soldat', clazz: 'Kämpfer', subclass: 'Meister des Kampfs (Battle Master)', level: '6',
+                    id: newId, name: 'Sir Alden', species: 'Mensch', background: 'Soldat',
+                    'char-origin-feat-select': 'Savage Attacker (Wilder Angreifer)', 'char-origin-feat-custom': 'Savage Attacker (Max Dmg Roll)',
+                    clazz: 'Kämpfer', subclass: 'Meister des Kampfs (Battle Master)', level: '6',
                     'hp-curr': '60', 'hp-max': '60', 'hp-temp': '0', 'ac': '18', 'speed': '9m', 'passive-perception': '14',
+                    'char-features-text': 'Aktionsschub, Durchschnaufen, Überlegenheitsmanöver (Riposte, Menacing Attack)',
                     'str': '18', 'dex': '10', 'con': '16', 'int': '10', 'wis': '12', 'cha': '10',
                     weapons: [{ name: 'Großschwert +1', stat: 'str', prof: true, magic: '1', dice: '2W6' }],
                     potions: [{ type: 'Großer Heiltrank (2W4+2)', count: '2', customName: '' }]
@@ -2502,12 +2576,17 @@
             else elem.style.color = "var(--text-muted)";
         }
 
-        function setSkillDisplay(elementId, mod, isProficient) {
+        function setSkillDisplay(elementId, mod, isProficient, isExpertise = false) {
             let elem = document.getElementById(elementId);
             if (!elem) return;
-            let total = mod + (isProficient ? (parseInt(document.getElementById('pb').value) || 0) : 0);
+            let pb = parseInt(document.getElementById('pb').value) || 0;
+            let multiplier = isExpertise ? 2 : (isProficient ? 1 : 0);
+            let total = mod + (pb * multiplier);
+
             elem.innerText = (total >= 0 ? "+" + total : total);
-            elem.style.color = isProficient ? "var(--pos-color)" : "var(--text-muted)";
+            if (isExpertise) elem.style.color = "var(--warning-color)";
+            else if (isProficient) elem.style.color = "var(--pos-color)";
+            else elem.style.color = "var(--text-muted)";
         }
 
         function updateAllCalculations() {
@@ -2529,34 +2608,34 @@
             formatValue('cha-mod', chaMod);
 
             setSkillDisplay('val-save-str', strMod, document.getElementById('save-str').checked);
-            setSkillDisplay('val-skill-athletics', strMod, document.getElementById('skill-athletics').checked);
+            setSkillDisplay('val-skill-athletics', strMod, document.getElementById('skill-athletics').checked, document.getElementById('exp-skill-athletics').checked);
 
             setSkillDisplay('val-save-dex', dexMod, document.getElementById('save-dex').checked);
-            setSkillDisplay('val-skill-acrobatics', dexMod, document.getElementById('skill-acrobatics').checked);
-            setSkillDisplay('val-skill-sleight', dexMod, document.getElementById('skill-sleight').checked);
-            setSkillDisplay('val-skill-stealth', dexMod, document.getElementById('skill-stealth').checked);
+            setSkillDisplay('val-skill-acrobatics', dexMod, document.getElementById('skill-acrobatics').checked, document.getElementById('exp-skill-acrobatics').checked);
+            setSkillDisplay('val-skill-sleight', dexMod, document.getElementById('skill-sleight').checked, document.getElementById('exp-skill-sleight').checked);
+            setSkillDisplay('val-skill-stealth', dexMod, document.getElementById('skill-stealth').checked, document.getElementById('exp-skill-stealth').checked);
 
             setSkillDisplay('val-save-con', conMod, document.getElementById('save-con').checked);
 
             setSkillDisplay('val-save-int', intMod, document.getElementById('save-int').checked);
-            setSkillDisplay('val-skill-arcana', intMod, document.getElementById('skill-arcana').checked);
-            setSkillDisplay('val-skill-history', intMod, document.getElementById('skill-history').checked);
-            setSkillDisplay('val-skill-investigation', intMod, document.getElementById('skill-investigation').checked);
-            setSkillDisplay('val-skill-nature', intMod, document.getElementById('skill-nature').checked);
-            setSkillDisplay('val-skill-religion', intMod, document.getElementById('skill-religion').checked);
+            setSkillDisplay('val-skill-arcana', intMod, document.getElementById('skill-arcana').checked, document.getElementById('exp-skill-arcana').checked);
+            setSkillDisplay('val-skill-history', intMod, document.getElementById('skill-history').checked, document.getElementById('exp-skill-history').checked);
+            setSkillDisplay('val-skill-investigation', intMod, document.getElementById('skill-investigation').checked, document.getElementById('exp-skill-investigation').checked);
+            setSkillDisplay('val-skill-nature', intMod, document.getElementById('skill-nature').checked, document.getElementById('exp-skill-nature').checked);
+            setSkillDisplay('val-skill-religion', intMod, document.getElementById('skill-religion').checked, document.getElementById('exp-skill-religion').checked);
 
             setSkillDisplay('val-save-wis', wisMod, document.getElementById('save-wis').checked);
-            setSkillDisplay('val-skill-animal', wisMod, document.getElementById('skill-animal').checked);
-            setSkillDisplay('val-skill-insight', wisMod, document.getElementById('skill-insight').checked);
-            setSkillDisplay('val-skill-medicine', wisMod, document.getElementById('skill-medicine').checked);
-            setSkillDisplay('val-skill-perception', wisMod, document.getElementById('skill-perception').checked);
-            setSkillDisplay('val-skill-survival', wisMod, document.getElementById('skill-survival').checked);
+            setSkillDisplay('val-skill-animal', wisMod, document.getElementById('skill-animal').checked, document.getElementById('exp-skill-animal').checked);
+            setSkillDisplay('val-skill-insight', wisMod, document.getElementById('skill-insight').checked, document.getElementById('exp-skill-insight').checked);
+            setSkillDisplay('val-skill-medicine', wisMod, document.getElementById('skill-medicine').checked, document.getElementById('exp-skill-medicine').checked);
+            setSkillDisplay('val-skill-perception', wisMod, document.getElementById('skill-perception').checked, document.getElementById('exp-skill-perception').checked);
+            setSkillDisplay('val-skill-survival', wisMod, document.getElementById('skill-survival').checked, document.getElementById('exp-skill-survival').checked);
 
             setSkillDisplay('val-save-cha', chaMod, document.getElementById('save-cha').checked);
-            setSkillDisplay('val-skill-deception', chaMod, document.getElementById('skill-deception').checked);
-            setSkillDisplay('val-skill-intimidation', chaMod, document.getElementById('skill-intimidation').checked);
-            setSkillDisplay('val-skill-performance', chaMod, document.getElementById('skill-performance').checked);
-            setSkillDisplay('val-skill-persuasion', chaMod, document.getElementById('skill-persuasion').checked);
+            setSkillDisplay('val-skill-deception', chaMod, document.getElementById('skill-deception').checked, document.getElementById('exp-skill-deception').checked);
+            setSkillDisplay('val-skill-intimidation', chaMod, document.getElementById('skill-intimidation').checked, document.getElementById('exp-skill-intimidation').checked);
+            setSkillDisplay('val-skill-performance', chaMod, document.getElementById('skill-performance').checked, document.getElementById('exp-skill-performance').checked);
+            setSkillDisplay('val-skill-persuasion', chaMod, document.getElementById('skill-persuasion').checked, document.getElementById('exp-skill-persuasion').checked);
 
             let autoAcToggle = document.getElementById('auto-ac-toggle');
             if (autoAcToggle && autoAcToggle.checked) {
